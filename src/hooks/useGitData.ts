@@ -22,6 +22,7 @@ interface DiffFile {
 }
 
 interface DiffData {
+  rawDiff: string
   files: DiffFile[]
   summary: {
     filesChanged: number

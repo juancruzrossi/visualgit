@@ -35,6 +35,7 @@ export function createGitRouter(repoPath: string): Router {
       const totalDeletions = files.reduce((sum, f) => sum + f.deletions, 0)
 
       res.json({
+        rawDiff,
         files,
         summary: {
           filesChanged: files.length,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Header } from './components/Header'
 import { DiffViewer } from './components/DiffViewer'
 import { AiPanel } from './components/AiPanel'
@@ -6,30 +6,10 @@ import { StatusBar } from './components/StatusBar'
 import { useGitData } from './hooks/useGitData'
 import { useAiAnalysis } from './hooks/useAiAnalysis'
 
-function buildRawDiff(files: { path: string; lines: { type: string; content: string }[] }[]): string {
-  return files
-    .map(f => {
-      const lines = f.lines
-        .map(l => {
-          const prefix = l.type === 'addition' ? '+' : l.type === 'deletion' ? '-' : ' '
-          return prefix + l.content
-        })
-        .join('\n')
-      return `--- a/${f.path}\n+++ b/${f.path}\n${lines}`
-    })
-    .join('\n')
-}
-
 export default function App() {
   const { info, diff, loading, error } = useGitData()
   const { analysis, isLoading: aiLoading, provider, setProvider, analyze } = useAiAnalysis()
   const [selectedFile, setSelectedFile] = useState(0)
-
-  useEffect(() => {
-    if (diff?.files.length) {
-      analyze(buildRawDiff(diff.files))
-    }
-  }, [diff])
 
   if (loading) {
     return (
@@ -71,9 +51,9 @@ export default function App() {
             isLoading={aiLoading}
             provider={provider}
             onProviderChange={setProvider}
-            onReanalyze={() => {
-              if (diff?.files.length) {
-                analyze(buildRawDiff(diff.files))
+            onAnalyze={() => {
+              if (diff?.rawDiff) {
+                analyze(diff.rawDiff)
               }
             }}
           />
