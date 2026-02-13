@@ -1,4 +1,5 @@
-import { ChevronDown, RefreshCw } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { ChevronDown, RefreshCw, Sparkles } from 'lucide-react'
 
 interface AiPanelProps {
   analysis: string
@@ -8,21 +9,66 @@ interface AiPanelProps {
   onAnalyze: () => void
 }
 
+const providers = [
+  { value: 'claude' as const, label: 'Claude' },
+  { value: 'openai' as const, label: 'OpenAI' },
+]
+
 export function AiPanel({ analysis, isLoading, provider, onProviderChange, onAnalyze }: AiPanelProps) {
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    if (dropdownOpen) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [dropdownOpen])
+
   return (
     <div className="flex flex-col h-full p-5 gap-4" style={{ background: '#0D1117' }}>
       <div className="flex items-center justify-between shrink-0">
         <span style={{ color: '#E6EDF3', fontSize: '13px' }}>AI Analysis</span>
-        <button
-          className="flex items-center gap-1.5 px-2.5 py-1.5 cursor-pointer"
-          style={{ border: '1px solid #30363D', background: 'transparent' }}
-          onClick={() => onProviderChange(provider === 'claude' ? 'openai' : 'claude')}
-        >
-          <span style={{ color: '#E6EDF3', fontSize: '12px' }}>
-            {provider === 'claude' ? 'Claude' : 'OpenAI'}
-          </span>
-          <ChevronDown size={12} color="#8B949E" />
-        </button>
+        <div className="relative" ref={dropdownRef}>
+          <button
+            className="flex items-center gap-1.5 px-2.5 py-1.5 cursor-pointer"
+            style={{ border: '1px solid #30363D', background: 'transparent' }}
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+          >
+            <span style={{ color: '#E6EDF3', fontSize: '12px' }}>
+              {providers.find(p => p.value === provider)?.label}
+            </span>
+            <ChevronDown size={12} color="#8B949E" />
+          </button>
+          {dropdownOpen && (
+            <div
+              className="absolute right-0 top-full mt-1 py-1 z-10 min-w-[120px]"
+              style={{ background: '#161B22', border: '1px solid #30363D' }}
+            >
+              {providers.map(p => (
+                <button
+                  key={p.value}
+                  className="w-full text-left px-3 py-1.5 cursor-pointer"
+                  style={{
+                    background: p.value === provider ? '#1C2128' : 'transparent',
+                    border: 'none',
+                    color: p.value === provider ? '#58A6FF' : '#E6EDF3',
+                    fontSize: '12px',
+                  }}
+                  onClick={() => {
+                    onProviderChange(p.value)
+                    setDropdownOpen(false)
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="w-full h-px shrink-0" style={{ background: '#30363D' }} />
@@ -57,7 +103,7 @@ export function AiPanel({ analysis, isLoading, provider, onProviderChange, onAna
         onClick={onAnalyze}
         disabled={isLoading}
       >
-        <RefreshCw size={14} color="#58A6FF" />
+        {analysis ? <RefreshCw size={14} color="#58A6FF" /> : <Sparkles size={14} color="#58A6FF" />}
         <span style={{ color: '#58A6FF', fontSize: '12px' }}>{analysis ? 'Re-analyze' : 'Get AI Analysis'}</span>
       </button>
     </div>

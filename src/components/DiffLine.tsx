@@ -6,8 +6,8 @@ interface DiffLineProps {
 
 const lineStyles = {
   context: { bg: 'transparent', text: '#8B949E', ln: '#484F58', prefix: ' ' },
-  addition: { bg: '#1B3826', text: '#2EA043', ln: '#2EA043', prefix: '+' },
-  deletion: { bg: '#3D1F1F', text: '#F85149', ln: '#F85149', prefix: '-' },
+  addition: { bg: '#122117', text: '#7EE787', ln: '#3FB950', prefix: '+' },
+  deletion: { bg: '#2A1516', text: '#FFA198', ln: '#F47067', prefix: '-' },
 }
 
 export function DiffLine({ type, lineNumber, content }: DiffLineProps) {
@@ -15,7 +15,7 @@ export function DiffLine({ type, lineNumber, content }: DiffLineProps) {
 
   return (
     <div
-      className="flex items-center h-[22px] w-full"
+      className="flex items-center h-[22px] min-w-full"
       style={{ background: style.bg }}
     >
       <span
@@ -28,7 +28,7 @@ export function DiffLine({ type, lineNumber, content }: DiffLineProps) {
         className="flex-1 whitespace-pre"
         style={{ color: style.text, fontSize: '12px' }}
       >
-        {type !== 'context' ? style.prefix : ' '}{content}
+        {content}
       </span>
     </div>
   )

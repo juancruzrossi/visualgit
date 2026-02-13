@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Header } from './components/Header'
 import { DiffViewer } from './components/DiffViewer'
 import { AiPanel } from './components/AiPanel'
@@ -10,6 +10,30 @@ export default function App() {
   const { info, diff, loading, error } = useGitData()
   const { analysis, isLoading: aiLoading, provider, setProvider, analyze } = useAiAnalysis()
   const [selectedFile, setSelectedFile] = useState(0)
+  const [diffWidth, setDiffWidth] = useState(65)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const container = containerRef.current
+    if (!container) return
+
+    const onMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect()
+      const pct = ((e.clientX - rect.left) / rect.width) * 100
+      setDiffWidth(Math.max(30, Math.min(80, pct)))
+    }
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }, [])
 
   if (loading) {
     return (
@@ -37,15 +61,20 @@ export default function App() {
         behind={info?.behind ?? 0}
       />
 
-      <div className="flex-1 flex min-h-0">
-        <div className="flex-[65] min-w-0" style={{ borderRight: '1px solid #30363D' }}>
+      <div className="flex-1 flex min-h-0" ref={containerRef}>
+        <div className="min-w-0" style={{ width: `${diffWidth}%` }}>
           <DiffViewer
             files={diff?.files ?? []}
             selectedFile={selectedFile}
             onSelectFile={setSelectedFile}
           />
         </div>
-        <div className="flex-[35] min-w-0">
+        <div
+          className="w-1 shrink-0 cursor-col-resize hover:bg-[#58A6FF]/40 transition-colors"
+          style={{ background: '#30363D' }}
+          onMouseDown={handleDragStart}
+        />
+        <div className="flex-1 min-w-0">
           <AiPanel
             analysis={analysis}
             isLoading={aiLoading}

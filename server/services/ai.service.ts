@@ -19,7 +19,7 @@ ${diff}
 
   getCommand(provider: AiProvider, prompt: string): { command: string; args: string[] } {
     if (provider === 'claude') {
-      return { command: 'claude', args: ['-p', prompt] }
+      return { command: 'claude', args: ['-p', '--model', 'sonnet', prompt] }
     }
     return {
       command: 'openai',
