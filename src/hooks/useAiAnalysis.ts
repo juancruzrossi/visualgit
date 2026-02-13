@@ -1,21 +1,24 @@
 import { useState, useCallback } from 'react'
 
 type Provider = 'claude' | 'openai'
+type AnalysisMode = 'full' | 'file' | 'selection'
 
 export function useAiAnalysis() {
   const [analysis, setAnalysis] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [provider, setProvider] = useState<Provider>('claude')
+  const [lastMode, setLastMode] = useState<AnalysisMode | null>(null)
 
-  const analyze = useCallback(async (diff: string) => {
+  const analyze = useCallback(async (content: string, mode: AnalysisMode = 'full', filePath?: string) => {
     setIsLoading(true)
     setAnalysis('')
+    setLastMode(mode)
 
     try {
       const res = await fetch('/api/ai/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, diff }),
+        body: JSON.stringify({ provider, mode, content, filePath }),
       })
 
       const reader = res.body?.getReader()
@@ -50,5 +53,5 @@ export function useAiAnalysis() {
     }
   }, [provider])
 
-  return { analysis, isLoading, provider, setProvider, analyze }
+  return { analysis, isLoading, provider, setProvider, analyze, lastMode }
 }

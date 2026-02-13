@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { FileCode, Folder, FolderOpen, ChevronRight, ChevronDown, PanelLeftClose, PanelLeft } from 'lucide-react'
+import { FileCode, Folder, FolderOpen, ChevronRight, ChevronDown, PanelLeftClose, PanelLeft, ScanSearch } from 'lucide-react'
 import { FileHeader } from './FileHeader'
 import { DiffLine } from './DiffLine'
 
@@ -20,6 +20,8 @@ interface DiffViewerProps {
   files: DiffFileData[]
   selectedFile: number
   onSelectFile: (index: number) => void
+  onSelectionChange: (text: string | null) => void
+  onAnalyzeSelection: () => void
 }
 
 interface TreeNode {
@@ -120,12 +122,36 @@ function TreeItem({ node, depth, selectedFile, onSelectFile, expandedFolders, to
   )
 }
 
-export function DiffViewer({ files, selectedFile, onSelectFile }: DiffViewerProps) {
+export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChange, onAnalyzeSelection }: DiffViewerProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [selectionPopup, setSelectionPopup] = useState<{ x: number; y: number } | null>(null)
   const tree = useMemo(() => buildTree(files), [files])
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileRefs = useRef<(HTMLDivElement | null)[]>([])
   const isScrollingTo = useRef(false)
+
+  // Text selection detection
+  useEffect(() => {
+    const handleMouseUp = () => {
+      const sel = window.getSelection()
+      const text = sel?.toString().trim()
+      if (text && text.length > 3 && scrollRef.current?.contains(sel?.anchorNode ?? null)) {
+        onSelectionChange(text)
+        const range = sel!.getRangeAt(0)
+        const rect = range.getBoundingClientRect()
+        const containerRect = scrollRef.current!.getBoundingClientRect()
+        setSelectionPopup({
+          x: rect.left - containerRect.left + rect.width / 2,
+          y: rect.top - containerRect.top - 8,
+        })
+      } else {
+        onSelectionChange(null)
+        setSelectionPopup(null)
+      }
+    }
+    document.addEventListener('mouseup', handleMouseUp)
+    return () => document.removeEventListener('mouseup', handleMouseUp)
+  }, [onSelectionChange])
 
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
     const set = new Set<string>()
@@ -235,7 +261,28 @@ export function DiffViewer({ files, selectedFile, onSelectFile }: DiffViewerProp
             </span>
           </div>
         </div>
-        <div className="flex-1 overflow-auto" ref={scrollRef}>
+        <div className="flex-1 overflow-auto relative" ref={scrollRef}>
+          {selectionPopup && (
+            <button
+              className="absolute z-20 flex items-center gap-1 px-2.5 py-1.5 cursor-pointer -translate-x-1/2 -translate-y-full"
+              style={{
+                left: selectionPopup.x,
+                top: selectionPopup.y,
+                background: '#161B22',
+                border: '1px solid #58A6FF',
+                borderRadius: '6px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                onAnalyzeSelection()
+                setSelectionPopup(null)
+              }}
+            >
+              <ScanSearch size={12} color="#58A6FF" />
+              <span style={{ color: '#58A6FF', fontSize: '11px', whiteSpace: 'nowrap' }}>Analyze Selection</span>
+            </button>
+          )}
           <div style={{ minWidth: 'fit-content' }}>
             {files.map((f, i) => (
               <div key={f.path} ref={el => { fileRefs.current[i] = el }}>

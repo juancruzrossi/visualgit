@@ -11,7 +11,10 @@ export default function App() {
   const { analysis, isLoading: aiLoading, provider, setProvider, analyze } = useAiAnalysis()
   const [selectedFile, setSelectedFile] = useState(0)
   const [diffWidth, setDiffWidth] = useState(65)
+  const [selectedText, setSelectedText] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  const currentFile = diff?.files?.[selectedFile]
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -67,6 +70,12 @@ export default function App() {
             files={diff?.files ?? []}
             selectedFile={selectedFile}
             onSelectFile={setSelectedFile}
+            onSelectionChange={setSelectedText}
+            onAnalyzeSelection={() => {
+              if (selectedText) {
+                analyze(selectedText, 'selection', currentFile?.path)
+              }
+            }}
           />
         </div>
         <div
@@ -80,11 +89,22 @@ export default function App() {
             isLoading={aiLoading}
             provider={provider}
             onProviderChange={setProvider}
-            onAnalyze={() => {
-              if (diff?.rawDiff) {
-                analyze(diff.rawDiff)
+            onAnalyzeFull={() => {
+              if (diff?.rawDiff) analyze(diff.rawDiff, 'full')
+            }}
+            onAnalyzeFile={() => {
+              if (currentFile) {
+                const fileContent = currentFile.lines.map(l => l.content).join('\n')
+                analyze(fileContent, 'file', currentFile.path)
               }
             }}
+            hasSelection={!!selectedText}
+            onAnalyzeSelection={() => {
+              if (selectedText) {
+                analyze(selectedText, 'selection', currentFile?.path)
+              }
+            }}
+            currentFileName={currentFile?.path}
           />
         </div>
       </div>
