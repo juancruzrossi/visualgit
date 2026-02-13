@@ -29,13 +29,13 @@ describe('GitService', () => {
     expect(branch).toBe('feature/auth')
   })
 
-  it('detects base branch from tracking', async () => {
+  it('detects base branch from local branches', async () => {
     (mockGit.raw as any).mockImplementation((args: string[]) => {
-      if (args.includes('rev-parse')) return Promise.resolve('origin/develop\n')
+      if (args.includes('--verify') && args.includes('main')) return Promise.resolve('abc123\n')
       return Promise.resolve('')
     })
     const base = await service.getBaseBranch('feature/auth')
-    expect(base).toBe('develop')
+    expect(base).toBe('main')
   })
 
   it('gets diff between branches', async () => {

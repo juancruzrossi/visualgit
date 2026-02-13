@@ -13,21 +13,16 @@ export class GitService {
   }
 
   async getBaseBranch(currentBranch: string): Promise<string> {
-    try {
-      const tracking = await this.git.raw(['rev-parse', '--abbrev-ref', `${currentBranch}@{upstream}`])
-      const remote = tracking.trim().split('/').slice(1).join('/')
-      return remote || 'main'
-    } catch {
-      for (const candidate of ['develop', 'main', 'master']) {
-        try {
-          await this.git.raw(['rev-parse', '--verify', candidate])
-          return candidate
-        } catch {
-          continue
-        }
+    for (const candidate of ['main', 'master', 'develop']) {
+      if (candidate === currentBranch) continue
+      try {
+        await this.git.raw(['rev-parse', '--verify', candidate])
+        return candidate
+      } catch {
+        continue
       }
-      return 'main'
     }
+    return 'main'
   }
 
   async getDiff(baseBranch: string, currentBranch: string): Promise<string> {
