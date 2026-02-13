@@ -1,31 +1,90 @@
+import { useState, useEffect } from 'react'
+import { Header } from './components/Header'
+import { DiffViewer } from './components/DiffViewer'
+import { AiPanel } from './components/AiPanel'
+import { StatusBar } from './components/StatusBar'
+import { useGitData } from './hooks/useGitData'
+import { useAiAnalysis } from './hooks/useAiAnalysis'
+
+function buildRawDiff(files: { path: string; lines: { type: string; content: string }[] }[]): string {
+  return files
+    .map(f => {
+      const lines = f.lines
+        .map(l => {
+          const prefix = l.type === 'addition' ? '+' : l.type === 'deletion' ? '-' : ' '
+          return prefix + l.content
+        })
+        .join('\n')
+      return `--- a/${f.path}\n+++ b/${f.path}\n${lines}`
+    })
+    .join('\n')
+}
+
 export default function App() {
+  const { info, diff, loading, error } = useGitData()
+  const { analysis, isLoading: aiLoading, provider, setProvider, analyze } = useAiAnalysis()
+  const [selectedFile, setSelectedFile] = useState(0)
+
+  useEffect(() => {
+    if (diff?.files.length) {
+      analyze(buildRawDiff(diff.files))
+    }
+  }, [diff])
+
+  if (loading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center" style={{ background: '#0D1117', color: '#8B949E', fontSize: '14px' }}>
+        Loading repository...
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center" style={{ background: '#0D1117', color: '#F85149', fontSize: '14px' }}>
+        {error}
+      </div>
+    )
+  }
+
   return (
     <div className="h-screen w-screen flex flex-col" style={{ background: '#0D1117' }}>
-      {/* Header */}
-      <div
-        className="h-12 shrink-0 flex items-center px-6"
-        style={{ borderBottom: '1px solid #30363D', color: '#8B949E', fontSize: '13px' }}
-      >
-        Header
-      </div>
+      <Header
+        repoName={info?.repoName ?? 'unknown'}
+        currentBranch={info?.currentBranch ?? ''}
+        baseBranch={info?.baseBranch ?? ''}
+        ahead={info?.ahead ?? 0}
+        behind={info?.behind ?? 0}
+      />
 
-      {/* Main */}
       <div className="flex-1 flex min-h-0">
-        <div className="flex-[65]" style={{ borderRight: '1px solid #30363D', color: '#8B949E', fontSize: '13px', padding: '16px' }}>
-          Diff Viewer
+        <div className="flex-[65] min-w-0" style={{ borderRight: '1px solid #30363D' }}>
+          <DiffViewer
+            files={diff?.files ?? []}
+            selectedFile={selectedFile}
+            onSelectFile={setSelectedFile}
+          />
         </div>
-        <div className="flex-[35]" style={{ color: '#8B949E', fontSize: '13px', padding: '16px' }}>
-          AI Panel
+        <div className="flex-[35] min-w-0">
+          <AiPanel
+            analysis={analysis}
+            isLoading={aiLoading}
+            provider={provider}
+            onProviderChange={setProvider}
+            onReanalyze={() => {
+              if (diff?.files.length) {
+                analyze(buildRawDiff(diff.files))
+              }
+            }}
+          />
         </div>
       </div>
 
-      {/* Status Bar */}
-      <div
-        className="h-8 shrink-0 flex items-center px-6"
-        style={{ background: '#161B22', borderTop: '1px solid #30363D', color: '#484F58', fontSize: '12px' }}
-      >
-        Status Bar
-      </div>
+      <StatusBar
+        filesChanged={diff?.summary.filesChanged ?? 0}
+        totalAdditions={diff?.summary.totalAdditions ?? 0}
+        totalDeletions={diff?.summary.totalDeletions ?? 0}
+      />
     </div>
   )
 }
