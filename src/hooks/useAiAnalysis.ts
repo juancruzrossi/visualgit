@@ -1,28 +1,37 @@
 import { useState, useCallback } from 'react'
 
 type Provider = 'claude' | 'openai'
+type AnalysisMode = 'full' | 'file' | 'selection'
+type LoadingPhase = null | 'connecting' | 'analyzing' | 'streaming'
 
 export function useAiAnalysis() {
   const [analysis, setAnalysis] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>(null)
   const [provider, setProvider] = useState<Provider>('claude')
+  const [lastMode, setLastMode] = useState<AnalysisMode | null>(null)
 
-  const analyze = useCallback(async (diff: string) => {
+  const analyze = useCallback(async (content: string, mode: AnalysisMode = 'full', filePath?: string) => {
     setIsLoading(true)
+    setLoadingPhase('connecting')
     setAnalysis('')
+    setLastMode(mode)
 
     try {
       const res = await fetch('/api/ai/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, diff }),
+        body: JSON.stringify({ provider, mode, content, filePath }),
       })
+
+      setLoadingPhase('analyzing')
 
       const reader = res.body?.getReader()
       const decoder = new TextDecoder()
 
       if (!reader) throw new Error('No stream available')
 
+      let receivedFirst = false
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
@@ -31,15 +40,21 @@ export function useAiAnalysis() {
         const lines = text.split('\n').filter(l => l.startsWith('data: '))
 
         for (const line of lines) {
+          const raw = line.slice(6)
+          let json: { done?: boolean; error?: string; text?: string }
           try {
-            const json = JSON.parse(line.slice(6))
-            if (json.done) break
-            if (json.error) throw new Error(json.error)
-            if (json.text) {
-              setAnalysis(prev => prev + json.text)
-            }
+            json = JSON.parse(raw)
           } catch {
-            // skip malformed SSE lines
+            continue // skip malformed SSE lines
+          }
+          if (json.done) break
+          if (json.error) throw new Error(json.error)
+          if (json.text) {
+            if (!receivedFirst) {
+              receivedFirst = true
+              setLoadingPhase('streaming')
+            }
+            setAnalysis(prev => prev + json.text)
           }
         }
       }
@@ -47,8 +62,9 @@ export function useAiAnalysis() {
       setAnalysis(prev => prev + '\n\n[Error: AI analysis failed]')
     } finally {
       setIsLoading(false)
+      setLoadingPhase(null)
     }
   }, [provider])
 
-  return { analysis, isLoading, provider, setProvider, analyze }
+  return { analysis, isLoading, loadingPhase, provider, setProvider, analyze, lastMode }
 }

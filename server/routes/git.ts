@@ -2,9 +2,13 @@ import { Router, type Request, type Response } from 'express'
 import { GitService } from '../services/git.service.js'
 import { parseDiff } from '../utils/diff-parser.js'
 
-export function createGitRouter(repoPath: string): Router {
+export function createGitRouter(repoPath: string, isGitRepo: boolean): Router {
   const router = Router()
   const gitService = new GitService(repoPath)
+
+  router.get('/status', (_req: Request, res: Response) => {
+    res.json({ isGitRepo })
+  })
 
   router.get('/info', async (_req: Request, res: Response) => {
     try {
@@ -35,6 +39,7 @@ export function createGitRouter(repoPath: string): Router {
       const totalDeletions = files.reduce((sum, f) => sum + f.deletions, 0)
 
       res.json({
+        rawDiff,
         files,
         summary: {
           filesChanged: files.length,

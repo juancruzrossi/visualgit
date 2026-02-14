@@ -1,4 +1,4 @@
-import simpleGit, { type SimpleGit } from 'simple-git'
+import { simpleGit, type SimpleGit } from 'simple-git'
 
 export class GitService {
   private git: SimpleGit
@@ -13,21 +13,16 @@ export class GitService {
   }
 
   async getBaseBranch(currentBranch: string): Promise<string> {
-    try {
-      const tracking = await this.git.raw(['rev-parse', '--abbrev-ref', `${currentBranch}@{upstream}`])
-      const remote = tracking.trim().split('/').slice(1).join('/')
-      return remote || 'main'
-    } catch {
-      for (const candidate of ['develop', 'main', 'master']) {
-        try {
-          await this.git.raw(['rev-parse', '--verify', candidate])
-          return candidate
-        } catch {
-          continue
-        }
+    for (const candidate of ['main', 'master', 'develop']) {
+      if (candidate === currentBranch) continue
+      try {
+        await this.git.raw(['rev-parse', '--verify', candidate])
+        return candidate
+      } catch {
+        continue
       }
-      return 'main'
     }
+    return 'main'
   }
 
   async getDiff(baseBranch: string, currentBranch: string): Promise<string> {
@@ -40,11 +35,11 @@ export class GitService {
       const origin = remotes.find(r => r.name === 'origin')
       if (origin?.refs?.fetch) {
         const url = origin.refs.fetch
-        const match = url.match(/[:/]([^/]+\/[^/]+?)(?:\.git)?$/)
-        return match ? match[1] : 'unknown/repo'
+        const match = url.match(/\/([^/]+?)(?:\.git)?$/)
+        return match ? match[1] : 'unknown'
       }
     } catch { /* fallback */ }
-    return 'local/repo'
+    return 'repo'
   }
 
   async getAheadBehind(baseBranch: string, currentBranch: string): Promise<{ ahead: number; behind: number }> {

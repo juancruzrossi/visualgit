@@ -1,4 +1,4 @@
-import { Terminal } from 'lucide-react'
+import { GitBranch } from 'lucide-react'
 
 interface StatusBarProps {
   filesChanged: number
@@ -24,8 +24,8 @@ export function StatusBar({ filesChanged, totalAdditions, totalDeletions }: Stat
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <Terminal size={12} color="#484F58" />
-        <span style={{ color: '#484F58', fontSize: '11px' }}>diff --git</span>
+        <GitBranch size={12} color="#484F58" />
+        <span style={{ color: '#484F58', fontSize: '11px' }}>visualgit</span>
       </div>
     </footer>
   )

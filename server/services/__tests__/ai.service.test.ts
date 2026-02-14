@@ -26,14 +26,14 @@ vi.mock('child_process', () => {
 describe('AiService', () => {
   it('builds the correct prompt with diff content', () => {
     const service = new AiService()
-    const prompt = service.buildPrompt('some diff content')
+    const prompt = service.buildPrompt('full', 'some diff content')
     expect(prompt).toContain('some diff content')
     expect(prompt).toContain('git diff')
   })
 
   it('returns a readable stream from claude CLI', async () => {
     const service = new AiService()
-    const stream = service.analyze('claude', 'some diff')
+    const stream = service.analyze('claude', 'full', 'some diff')
     const chunks: string[] = []
 
     for await (const chunk of stream) {

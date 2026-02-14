@@ -22,6 +22,7 @@ interface DiffFile {
 }
 
 interface DiffData {
+  rawDiff: string
   files: DiffFile[]
   summary: {
     filesChanged: number
@@ -35,10 +36,19 @@ export function useGitData() {
   const [diff, setDiff] = useState<DiffData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isGitRepo, setIsGitRepo] = useState(true)
 
   useEffect(() => {
     async function fetchData() {
       try {
+        const statusRes = await fetch('/api/git/status')
+        const status = await statusRes.json()
+
+        if (!status.isGitRepo) {
+          setIsGitRepo(false)
+          return
+        }
+
         const [infoRes, diffRes] = await Promise.all([
           fetch('/api/git/info'),
           fetch('/api/git/diff'),
@@ -58,5 +68,5 @@ export function useGitData() {
     fetchData()
   }, [])
 
-  return { info, diff, loading, error }
+  return { info, diff, loading, error, isGitRepo }
 }

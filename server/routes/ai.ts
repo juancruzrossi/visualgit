@@ -1,15 +1,20 @@
 import { Router, type Request, type Response } from 'express'
-import { AiService, type AiProvider } from '../services/ai.service.js'
+import { AiService, type AiProvider, type AnalysisMode } from '../services/ai.service.js'
 
 export function createAiRouter(): Router {
   const router = Router()
   const aiService = new AiService()
 
   router.post('/analyze', async (req: Request, res: Response) => {
-    const { provider = 'claude', diff } = req.body as { provider?: AiProvider; diff?: string }
+    const { provider = 'claude', mode = 'full', content, filePath } = req.body as {
+      provider?: AiProvider
+      mode?: AnalysisMode
+      content?: string
+      filePath?: string
+    }
 
-    if (!diff) {
-      res.status(400).json({ error: 'diff is required' })
+    if (!content) {
+      res.status(400).json({ error: 'content is required' })
       return
     }
 
@@ -20,7 +25,7 @@ export function createAiRouter(): Router {
     })
 
     try {
-      for await (const chunk of aiService.analyze(provider, diff)) {
+      for await (const chunk of aiService.analyze(provider, mode, content, filePath)) {
         res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`)
       }
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`)
