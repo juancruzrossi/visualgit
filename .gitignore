@@ -5,4 +5,5 @@ dist-server/
 .env.local
 *.log
 *.pen
+.DS_Store
 docs/
