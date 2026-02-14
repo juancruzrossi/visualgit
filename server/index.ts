@@ -14,7 +14,7 @@ export function createServer(repoPath: string, isGitRepo = true) {
   app.use(express.json({ limit: '5mb' }))
 
   app.use('/api/git', createGitRouter(repoPath, isGitRepo))
-  app.use('/api/ai', createAiRouter())
+  app.use('/api/ai', createAiRouter(repoPath))
 
   const distPath = path.join(__dirname, '..', 'dist')
   app.use(express.static(distPath))
