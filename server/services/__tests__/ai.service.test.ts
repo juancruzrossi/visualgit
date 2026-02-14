@@ -3,14 +3,16 @@ import { AiService } from '../ai.service'
 
 vi.mock('child_process', () => {
   const EventEmitter = require('events').EventEmitter
-  const { Readable } = require('stream')
+  const { Readable, Writable } = require('stream')
   return {
     spawn: vi.fn(() => {
       const proc = new EventEmitter()
       const stdout = new Readable({ read() {} })
       const stderr = new Readable({ read() {} })
+      const stdin = new Writable({ write(_chunk: any, _enc: any, cb: any) { cb() } })
       proc.stdout = stdout
       proc.stderr = stderr
+      proc.stdin = stdin
 
       setTimeout(() => {
         stdout.push('This change refactors the auth logic.')
@@ -45,14 +47,14 @@ describe('AiService', () => {
 
   it('gets the command args for claude provider', () => {
     const service = new AiService()
-    const { command, args } = service.getCommand('claude', 'test prompt')
+    const { command, args } = service.getCommand('claude')
     expect(command).toBe('claude')
     expect(args).toContain('-p')
   })
 
   it('gets the command args for openai provider', () => {
     const service = new AiService()
-    const { command, args } = service.getCommand('openai', 'test prompt')
+    const { command, args } = service.getCommand('openai')
     expect(command).toBe('openai')
   })
 })
