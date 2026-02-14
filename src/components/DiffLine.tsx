@@ -5,7 +5,7 @@ interface DiffLineProps {
 }
 
 const lineStyles = {
-  context: { bg: 'transparent', text: '#8B949E', ln: '#484F58', prefix: ' ' },
+  context: { bg: 'transparent', text: '#9DA5AE', ln: '#484F58', prefix: ' ' },
   addition: { bg: '#122117', text: '#7EE787', ln: '#3FB950', prefix: '+' },
   deletion: { bg: '#2A1516', text: '#FFA198', ln: '#F47067', prefix: '-' },
 }

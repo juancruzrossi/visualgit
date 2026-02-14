@@ -8,15 +8,20 @@ export class AiService {
   private hasConversation = false
 
   buildPrompt(mode: AnalysisMode, content: string, filePath?: string): string {
-    const markdownInstruction = 'Format your response using Markdown (headings, bold, bullet points, code blocks).'
+    const systemRules = [
+      'Format your response using Markdown (headings, bold, bullet points, inline code).',
+      'NEVER ask questions, suggest next steps, or offer to do anything. This is a read-only report.',
+      'NEVER repeat the source code in your response.',
+      'Be concise. Use bullet points, not paragraphs.',
+    ].join(' ')
 
     if (mode === 'selection') {
-      return `Analyze this selected code snippet${filePath ? ` from ${filePath}` : ''}. Explain what it does, any issues, and potential improvements. Be concise with bullet points. ${markdownInstruction}\n\n\`\`\`\n${content}\n\`\`\``
+      return `Analyze this code snippet${filePath ? ` from ${filePath}` : ''}. Follow this exact structure:\n\n## What It Does\n(Brief explanation)\n\n## Issues\n(Bugs, risks, or anti-patterns found — or "None found")\n\n## Improvements\n(Concrete suggestions — or "Looks good")\n\n${systemRules}\n\n\`\`\`\n${content}\n\`\`\``
     }
     if (mode === 'file') {
-      return `Analyze the changes in ${filePath || 'this file'}. Explain what changed and why it matters, key improvements, and any risks. Be concise with bullet points. ${markdownInstruction}\n\n\`\`\`diff\n${content}\n\`\`\``
+      return `Analyze the changes in ${filePath || 'this file'}. Follow this exact structure:\n\n## Summary\n(What changed in 1-2 sentences)\n\n## Changes\n(Bullet list of each meaningful change)\n\n## Risks\n(Potential issues — or "None identified")\n\n## Verdict\n(One-line assessment: safe to merge, needs review, or has issues)\n\n${systemRules}\n\n\`\`\`diff\n${content}\n\`\`\``
     }
-    return `You are a senior software engineer. Analyze this complete git diff and provide:\n\n1. Executive summary of all changes\n2. Key improvements or patterns introduced\n3. Any potential risks or concerns\n4. How the changes relate to each other\n\nBe concise with bullet points. Do not repeat the code. ${markdownInstruction}\n\n\`\`\`diff\n${content}\n\`\`\``
+    return `You are a senior software engineer reviewing a git diff. Follow this exact structure:\n\n## Summary\n(Executive summary in 2-3 sentences)\n\n## Changes by File\n(Group changes by file, bullet points per file)\n\n## Patterns\n(Key improvements or patterns introduced — or "No notable patterns")\n\n## Risks\n(Potential issues or concerns — or "None identified")\n\n## Verdict\n(One-line overall assessment)\n\n${systemRules}\n\n\`\`\`diff\n${content}\n\`\`\``
   }
 
   getCommand(provider: AiProvider, model: ClaudeModel = 'sonnet'): { command: string; args: string[]; useStdin: boolean } {

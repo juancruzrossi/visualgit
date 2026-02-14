@@ -13,7 +13,7 @@ export function StatusBar({ filesChanged, totalAdditions, totalDeletions }: Stat
       style={{ background: '#161B22', borderTop: '1px solid #30363D' }}
     >
       <div className="flex items-center gap-4">
-        <span style={{ color: '#8B949E', fontSize: '12px' }}>
+        <span style={{ color: '#9DA5AE', fontSize: '12px' }}>
           {filesChanged} file{filesChanged !== 1 ? 's' : ''} changed
         </span>
         <span style={{ color: '#2EA043', fontSize: '12px' }}>

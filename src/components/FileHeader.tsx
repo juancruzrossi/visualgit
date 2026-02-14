@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, FileCode, Check } from 'lucide-react'
+import { ChevronDown, ChevronRight, FileCode } from 'lucide-react'
 
 interface FileHeaderProps {
   path: string
@@ -19,31 +19,34 @@ export function FileHeader({ path, additions, deletions, collapsed, onToggle, vi
       style={{ background: '#161B22', borderBottom: '1px solid #30363D' }}
       onClick={onToggle}
     >
-      <div className="flex items-center gap-2">
-        <Chevron size={14} color="#8B949E" />
-        <FileCode size={14} color={viewed ? '#3FB950' : '#8B949E'} />
-        <span style={{ color: viewed ? '#8B949E' : '#E6EDF3', fontSize: '13px' }}>{path}</span>
+      <div className="flex items-center gap-2 min-w-0">
+        <Chevron size={14} color="#9DA5AE" className="shrink-0" />
+        <FileCode size={14} color={viewed ? '#3FB950' : '#9DA5AE'} className="shrink-0" />
+        <span className="truncate" style={{ color: viewed ? '#9DA5AE' : '#E6EDF3', fontSize: '13px' }}>{path}</span>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 shrink-0 ml-3">
         <span style={{ color: '#3FB950', fontSize: '12px' }}>+{additions}</span>
         <span style={{ color: '#F47067', fontSize: '12px' }}>-{deletions}</span>
-        <button
-          className="flex items-center gap-1 px-1.5 py-0.5 cursor-pointer"
+        <div
+          className="flex items-center justify-center cursor-pointer shrink-0"
           style={{
-            background: viewed ? 'rgba(63,185,80,0.15)' : 'transparent',
-            border: `1px solid ${viewed ? '#3FB950' : '#30363D'}`,
-            borderRadius: '4px',
+            width: '15px',
+            height: '15px',
+            border: `1.5px solid ${viewed ? '#3FB950' : '#484F58'}`,
+            borderRadius: '3px',
+            background: viewed ? 'transparent' : 'transparent',
           }}
           onClick={(e) => {
             e.stopPropagation()
             onToggleViewed?.()
           }}
         >
-          {viewed && <Check size={10} color="#3FB950" />}
-          <span style={{ color: viewed ? '#3FB950' : '#8B949E', fontSize: '11px' }}>
-            {viewed ? 'Viewed' : 'View'}
-          </span>
-        </button>
+          {viewed && (
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+              <path d="M2 5.5L4.5 8L9 3" stroke="#3FB950" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </div>
       </div>
     </div>
   )
