@@ -15,13 +15,11 @@ export function createGitRouter(repoPath: string, isGitRepo: boolean): Router {
       const currentBranch = await gitService.getCurrentBranch()
       const baseBranch = await gitService.getBaseBranch(currentBranch)
       const repoName = await gitService.getRepoName()
-      const aheadBehind = await gitService.getAheadBehind(baseBranch, currentBranch)
 
       res.json({
         repoName,
         currentBranch,
         baseBranch,
-        ...aheadBehind,
       })
     } catch {
       res.status(500).json({ error: 'Failed to read git info' })

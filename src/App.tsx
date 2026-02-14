@@ -83,8 +83,6 @@ export default function App() {
         repoName={info?.repoName ?? 'unknown'}
         currentBranch={info?.currentBranch ?? ''}
         baseBranch={info?.baseBranch ?? ''}
-        ahead={info?.ahead ?? 0}
-        behind={info?.behind ?? 0}
       />
 
       <div className="flex-1 flex min-h-0" ref={containerRef}>

@@ -1,14 +1,12 @@
-import { GitBranch, ArrowRight, Circle } from 'lucide-react'
+import { GitBranch, ArrowRight } from 'lucide-react'
 
 interface HeaderProps {
   repoName: string
   currentBranch: string
   baseBranch: string
-  ahead: number
-  behind: number
 }
 
-export function Header({ repoName, currentBranch, baseBranch, ahead, behind }: HeaderProps) {
+export function Header({ repoName, currentBranch, baseBranch }: HeaderProps) {
   return (
     <header
       className="h-12 shrink-0 flex items-center justify-between px-6"
@@ -24,12 +22,6 @@ export function Header({ repoName, currentBranch, baseBranch, ahead, behind }: H
           <ArrowRight size={14} color="#9DA5AE" />
           <span style={{ color: '#58A6FF', fontSize: '13px' }}>{currentBranch}</span>
         </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <Circle size={8} fill="#2EA043" color="#2EA043" />
-        <span style={{ color: '#9DA5AE', fontSize: '12px' }}>
-          {ahead} ahead, {behind} behind
-        </span>
       </div>
     </header>
   )
