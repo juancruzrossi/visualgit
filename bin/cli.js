@@ -3,13 +3,39 @@
 import { existsSync, readFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { spawn } from 'child_process'
+import { spawn, execSync } from 'child_process'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf-8'))
 
 if (process.argv.includes('--version') || process.argv.includes('-v')) {
-  const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf-8'))
   console.log(`visualgit v${pkg.version}`)
+  process.exit(0)
+}
+
+if (process.argv[2] === 'update') {
+  const current = pkg.version
+  console.log(`\x1b[36m⟳\x1b[0m Current version: v${current}`)
+  console.log(`  Checking for updates...`)
+
+  try {
+    const latest = execSync('npm view @jxtools/visualgit version', { encoding: 'utf-8' }).trim()
+
+    if (latest === current) {
+      console.log(`\x1b[32m✓\x1b[0m Already on the latest version (v${current})`)
+      process.exit(0)
+    }
+
+    console.log(`\x1b[33m↑\x1b[0m New version available: v${latest}`)
+    console.log(`  Updating...`)
+
+    execSync('npm install -g @jxtools/visualgit@latest', { stdio: 'inherit' })
+    console.log(`\n\x1b[32m✓\x1b[0m Updated to v${latest}`)
+  } catch (err) {
+    console.error(`\x1b[31m✗\x1b[0m Update failed: ${err.message}`)
+    process.exit(1)
+  }
+
   process.exit(0)
 }
 
