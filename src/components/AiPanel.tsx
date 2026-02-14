@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, Loader2, FileText, ScanSearch, Layers, PanelRightClose } from 'lucide-react'
 
 type LoadingPhase = null | 'connecting' | 'analyzing' | 'streaming'
+type ClaudeModel = 'opus' | 'sonnet' | 'haiku'
 
 interface AiPanelProps {
   analysis: string
@@ -9,6 +10,8 @@ interface AiPanelProps {
   loadingPhase: LoadingPhase
   provider: 'claude' | 'openai'
   onProviderChange: (provider: 'claude' | 'openai') => void
+  model: ClaudeModel
+  onModelChange: (model: ClaudeModel) => void
   onAnalyzeFull: () => void
   onAnalyzeFile: () => void
   hasSelection: boolean
@@ -22,6 +25,12 @@ const providers = [
   { value: 'openai' as const, label: 'OpenAI' },
 ]
 
+const claudeModels: { value: ClaudeModel; label: string }[] = [
+  { value: 'opus', label: 'Opus' },
+  { value: 'sonnet', label: 'Sonnet' },
+  { value: 'haiku', label: 'Haiku' },
+]
+
 const phaseMessages: Record<string, string> = {
   connecting: 'Connecting to AI provider...',
   analyzing: 'Analyzing changes...',
@@ -30,20 +39,26 @@ const phaseMessages: Record<string, string> = {
 
 export function AiPanel({
   analysis, isLoading, loadingPhase, provider, onProviderChange,
+  model, onModelChange,
   onAnalyzeFull, onAnalyzeFile, hasSelection, onAnalyzeSelection, currentFileName, onClose,
 }: AiPanelProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const modelDropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false)
       }
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node)) {
+        setModelDropdownOpen(false)
+      }
     }
-    if (dropdownOpen) document.addEventListener('mousedown', handleClickOutside)
+    if (dropdownOpen || modelDropdownOpen) document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [dropdownOpen])
+  }, [dropdownOpen, modelDropdownOpen])
 
   const btnStyle = {
     border: '1px solid #30363D',
@@ -59,6 +74,7 @@ export function AiPanel({
           </button>
           <span style={{ color: '#8B949E', fontSize: '12px' }}>AI Analysis</span>
         </div>
+        <div className="flex items-center gap-2">
         <div className="relative" ref={dropdownRef}>
           <button
             className="flex items-center gap-1.5 px-2.5 py-1 cursor-pointer"
@@ -95,6 +111,46 @@ export function AiPanel({
               ))}
             </div>
           )}
+        </div>
+        {provider === 'claude' && (
+          <div className="relative" ref={modelDropdownRef}>
+            <button
+              className="flex items-center gap-1.5 px-2.5 py-1 cursor-pointer"
+              style={{ border: '1px solid #30363D', background: 'transparent', borderRadius: '4px' }}
+              onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
+            >
+              <span style={{ color: '#E6EDF3', fontSize: '11px' }}>
+                {claudeModels.find(m => m.value === model)?.label}
+              </span>
+              <ChevronDown size={10} color="#8B949E" />
+            </button>
+            {modelDropdownOpen && (
+              <div
+                className="absolute right-0 top-full mt-1 py-1 z-10 min-w-[120px]"
+                style={{ background: '#161B22', border: '1px solid #30363D' }}
+              >
+                {claudeModels.map(m => (
+                  <button
+                    key={m.value}
+                    className="w-full text-left px-3 py-1.5 cursor-pointer"
+                    style={{
+                      background: m.value === model ? '#1C2128' : 'transparent',
+                      border: 'none',
+                      color: m.value === model ? '#58A6FF' : '#E6EDF3',
+                      fontSize: '12px',
+                    }}
+                    onClick={() => {
+                      onModelChange(m.value)
+                      setModelDropdownOpen(false)
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         </div>
       </div>
 

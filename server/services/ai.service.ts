@@ -2,6 +2,7 @@ import { spawn } from 'child_process'
 
 export type AiProvider = 'claude' | 'openai'
 export type AnalysisMode = 'full' | 'file' | 'selection'
+export type ClaudeModel = 'opus' | 'sonnet' | 'haiku'
 
 export class AiService {
   private hasConversation = false
@@ -16,9 +17,9 @@ export class AiService {
     return `You are a senior software engineer. Analyze this complete git diff and provide:\n\n1. Executive summary of all changes\n2. Key improvements or patterns introduced\n3. Any potential risks or concerns\n4. How the changes relate to each other\n\nBe concise with bullet points. Do not repeat the code.\n\n\`\`\`diff\n${content}\n\`\`\``
   }
 
-  getCommand(provider: AiProvider, prompt: string): { command: string; args: string[] } {
+  getCommand(provider: AiProvider, prompt: string, model: ClaudeModel = 'sonnet'): { command: string; args: string[] } {
     if (provider === 'claude') {
-      const args = ['-p', '--model', 'sonnet']
+      const args = ['-p', '--model', model]
       if (this.hasConversation) args.push('--continue')
       args.push(prompt)
       return { command: 'claude', args }
@@ -29,9 +30,9 @@ export class AiService {
     }
   }
 
-  async *analyze(provider: AiProvider, mode: AnalysisMode, content: string, filePath?: string): AsyncGenerator<string> {
+  async *analyze(provider: AiProvider, mode: AnalysisMode, content: string, filePath?: string, model?: ClaudeModel): AsyncGenerator<string> {
     const prompt = this.buildPrompt(mode, content, filePath)
-    const { command, args } = this.getCommand(provider, prompt)
+    const { command, args } = this.getCommand(provider, prompt, model)
 
     const env = { ...process.env }
     delete env.CLAUDECODE

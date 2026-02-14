@@ -1,15 +1,22 @@
 #!/usr/bin/env node
 
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { spawn } from 'child_process'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+if (process.argv.includes('--version') || process.argv.includes('-v')) {
+  const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf-8'))
+  console.log(`visualgit v${pkg.version}`)
+  process.exit(0)
+}
 
 const repoPath = process.cwd()
 const isGitRepo = existsSync(resolve(repoPath, '.git'))
 
 async function main() {
-  const __dirname = dirname(fileURLToPath(import.meta.url))
   const serverPath = resolve(__dirname, '..', 'dist-server', 'index.js')
 
   if (!existsSync(serverPath)) {

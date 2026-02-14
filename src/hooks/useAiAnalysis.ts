@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 
 type Provider = 'claude' | 'openai'
+type ClaudeModel = 'opus' | 'sonnet' | 'haiku'
 type AnalysisMode = 'full' | 'file' | 'selection'
 type LoadingPhase = null | 'connecting' | 'analyzing' | 'streaming'
 
@@ -9,6 +10,7 @@ export function useAiAnalysis() {
   const [isLoading, setIsLoading] = useState(false)
   const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>(null)
   const [provider, setProvider] = useState<Provider>('claude')
+  const [model, setModel] = useState<ClaudeModel>('sonnet')
   const [lastMode, setLastMode] = useState<AnalysisMode | null>(null)
 
   const analyze = useCallback(async (content: string, mode: AnalysisMode = 'full', filePath?: string) => {
@@ -21,7 +23,7 @@ export function useAiAnalysis() {
       const res = await fetch('/api/ai/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, mode, content, filePath }),
+        body: JSON.stringify({ provider, mode, content, filePath, model: provider === 'claude' ? model : undefined }),
       })
 
       setLoadingPhase('analyzing')
@@ -64,7 +66,7 @@ export function useAiAnalysis() {
       setIsLoading(false)
       setLoadingPhase(null)
     }
-  }, [provider])
+  }, [provider, model])
 
-  return { analysis, isLoading, loadingPhase, provider, setProvider, analyze, lastMode }
+  return { analysis, isLoading, loadingPhase, provider, setProvider, model, setModel, analyze, lastMode }
 }

@@ -9,7 +9,7 @@ import { useAiAnalysis } from './hooks/useAiAnalysis'
 
 export default function App() {
   const { info, diff, loading, error, isGitRepo } = useGitData()
-  const { analysis, isLoading: aiLoading, loadingPhase, provider, setProvider, analyze } = useAiAnalysis()
+  const { analysis, isLoading: aiLoading, loadingPhase, provider, setProvider, model, setModel, analyze } = useAiAnalysis()
   const [selectedFile, setSelectedFile] = useState(0)
   const [diffWidth, setDiffWidth] = useState(65)
   const [aiPanelOpen, setAiPanelOpen] = useState(true)
@@ -115,6 +115,8 @@ export default function App() {
                 loadingPhase={loadingPhase}
                 provider={provider}
                 onProviderChange={setProvider}
+                model={model}
+                onModelChange={setModel}
                 onAnalyzeFull={() => {
                   if (diff?.rawDiff) analyze(diff.rawDiff, 'full')
                 }}
