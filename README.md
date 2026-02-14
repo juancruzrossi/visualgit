@@ -25,6 +25,12 @@ This opens a browser window with a visual diff between your current branch and i
 - AI analysis of your changes on demand (Claude or OpenAI)
 - Resizable panels and dark terminal-style UI
 
+## Update
+
+```bash
+npm update -g @jxtools/visualgit
+```
+
 ## Requirements
 
 - Node.js 18+

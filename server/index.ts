@@ -18,8 +18,10 @@ export function createServer(repoPath: string, isGitRepo = true) {
 
   const distPath = path.join(__dirname, '..', 'dist')
   app.use(express.static(distPath))
-  app.get('/{*splat}', (_req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'))
+  app.get('/{*splat}', (_req, res, next) => {
+    res.sendFile(path.join(distPath, 'index.html'), (err) => {
+      if (err) next()
+    })
   })
 
   return app
@@ -32,8 +34,5 @@ if (isDirectRun) {
   const port = parseInt(process.env.PORT || '4321', 10)
   const isGitRepo = process.env.IS_GIT_REPO !== 'false'
   const app = createServer(repoPath, isGitRepo)
-  app.listen(port, () => {
-    console.log(`VisualGit server running at http://localhost:${port}`)
-    console.log(`Repo: ${repoPath}`)
-  })
+  app.listen(port)
 }
