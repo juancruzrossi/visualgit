@@ -1,6 +1,6 @@
 {
   "name": "@jxtools/visualgit",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Terminal-style git diff viewer with AI-powered explanations",
   "type": "module",
   "bin": {
@@ -32,6 +32,10 @@
     "terminal"
   ],
   "author": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/juancruzrossi/visualgit"
+  },
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.6",
