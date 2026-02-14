@@ -71,9 +71,9 @@ export function AiPanel({
       <div className="flex items-center justify-between px-3 h-10 shrink-0" style={{ background: '#161B22', borderBottom: '1px solid #30363D' }}>
         <div className="flex items-center gap-2">
           <button className="cursor-pointer" style={{ background: 'transparent', border: 'none' }} onClick={onClose}>
-            <PanelRightClose size={14} color="#8B949E" />
+            <PanelRightClose size={14} color="#9DA5AE" />
           </button>
-          <span style={{ color: '#8B949E', fontSize: '12px' }}>AI Analysis</span>
+          <span style={{ color: '#9DA5AE', fontSize: '12px' }}>AI Analysis</span>
         </div>
         <div className="flex items-center gap-2">
         <div className="relative" ref={dropdownRef}>
@@ -85,7 +85,7 @@ export function AiPanel({
             <span style={{ color: '#E6EDF3', fontSize: '11px' }}>
               {providers.find(p => p.value === provider)?.label}
             </span>
-            <ChevronDown size={10} color="#8B949E" />
+            <ChevronDown size={10} color="#9DA5AE" />
           </button>
           {dropdownOpen && (
             <div
@@ -123,7 +123,7 @@ export function AiPanel({
               <span style={{ color: '#E6EDF3', fontSize: '11px' }}>
                 {claudeModels.find(m => m.value === model)?.label}
               </span>
-              <ChevronDown size={10} color="#8B949E" />
+              <ChevronDown size={10} color="#9DA5AE" />
             </button>
             {modelDropdownOpen && (
               <div
@@ -196,12 +196,12 @@ export function AiPanel({
         ) : isLoading ? (
           <div className="flex items-center gap-2">
             <Loader2 size={14} color="#58A6FF" className="animate-spin" />
-            <span style={{ color: '#8B949E' }}>
+            <span style={{ color: '#9DA5AE' }}>
               {loadingPhase ? phaseMessages[loadingPhase] || 'Analyzing...' : 'Analyzing...'}
             </span>
           </div>
         ) : (
-          <span style={{ color: '#8B949E' }}>
+          <span style={{ color: '#9DA5AE' }}>
             Choose an analysis mode below.
           </span>
         )}

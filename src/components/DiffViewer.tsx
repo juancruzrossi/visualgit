@@ -84,9 +84,9 @@ function TreeItem({ node, depth, selectedFile, onSelectFile, expandedFolders, to
         {isViewed ? (
           <Check size={12} color="#3FB950" className="shrink-0" />
         ) : (
-          <FileCode size={12} color={isSelected ? '#58A6FF' : '#8B949E'} className="shrink-0" />
+          <FileCode size={12} color={isSelected ? '#58A6FF' : '#9DA5AE'} className="shrink-0" />
         )}
-        <span className="truncate" style={{ color: isViewed ? '#8B949E' : isSelected ? '#E6EDF3' : '#C9D1D9', fontSize: '12px' }}>
+        <span className="truncate" style={{ color: isViewed ? '#9DA5AE' : isSelected ? '#E6EDF3' : '#C9D1D9', fontSize: '12px' }}>
           {node.name}
         </span>
         <span className="ml-auto shrink-0 flex gap-1 pr-2" style={{ fontSize: '11px' }}>
@@ -110,8 +110,8 @@ function TreeItem({ node, depth, selectedFile, onSelectFile, expandedFolders, to
         onClick={() => toggleFolder(folderPath)}
       >
         <ChevronIcon size={10} color="#484F58" className="shrink-0" />
-        <FolderIcon size={12} color="#8B949E" className="shrink-0" />
-        <span style={{ color: '#8B949E', fontSize: '12px' }}>{node.name}</span>
+        <FolderIcon size={12} color="#9DA5AE" className="shrink-0" />
+        <span style={{ color: '#9DA5AE', fontSize: '12px' }}>{node.name}</span>
       </button>
       {isOpen && sorted.map(child => (
         <TreeItem
@@ -253,7 +253,7 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
 
   if (files.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center h-full" style={{ color: '#8B949E', fontSize: '13px' }}>
+      <div className="flex-1 flex items-center justify-center h-full" style={{ color: '#9DA5AE', fontSize: '13px' }}>
         No diff available. Are you on a feature branch?
       </div>
     )
@@ -270,9 +270,9 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
           style={{ width: `${sidebarWidth}px`, background: '#161B22' }}
         >
           <div className="flex items-center justify-between px-3 h-10 shrink-0" style={{ borderBottom: '1px solid #30363D' }}>
-            <span style={{ color: '#8B949E', fontSize: '12px' }}>Files ({files.length})</span>
+            <span style={{ color: '#9DA5AE', fontSize: '12px' }}>Files ({files.length})</span>
             <button className="cursor-pointer" style={{ background: 'transparent', border: 'none' }} onClick={() => setSidebarOpen(false)}>
-              <PanelLeftClose size={14} color="#8B949E" />
+              <PanelLeftClose size={14} color="#9DA5AE" />
             </button>
           </div>
           <div className="py-1">
@@ -306,12 +306,16 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
               style={{ background: '#161B22', border: 'none', borderBottom: '1px solid #30363D', borderRight: '1px solid #30363D' }}
               onClick={() => setSidebarOpen(true)}
             >
-              <PanelLeft size={14} color="#8B949E" />
+              <PanelLeft size={14} color="#9DA5AE" />
             </button>
           )}
           <div className="flex-1 h-10 flex items-center px-4 shrink-0" style={{ background: '#161B22', borderBottom: '1px solid #30363D' }}>
-            <span style={{ color: '#8B949E', fontSize: '12px' }}>
-              {selectedFile + 1} / {files.length} files
+            <span style={{ color: '#9DA5AE', fontSize: '12px' }}>
+              {viewedFiles.size > 0 ? (
+                <>{viewedFiles.size} / {files.length} files viewed</>
+              ) : (
+                <>{files.length} files</>
+              )}
             </span>
           </div>
         </div>
@@ -337,7 +341,7 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
               <span style={{ color: '#58A6FF', fontSize: '11px', whiteSpace: 'nowrap' }}>Analyze Selection</span>
             </button>
           )}
-          <div style={{ minWidth: 'fit-content' }}>
+          <div>
             {files.map((f, i) => (
               <div key={f.path} ref={el => { fileRefs.current[i] = el }}>
                 <div className="sticky top-0 z-10">
@@ -356,17 +360,24 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
                     }}
                     viewed={viewedFiles.has(i)}
                     onToggleViewed={() => {
+                      const willBeViewed = !viewedFiles.has(i)
                       setViewedFiles(prev => {
                         const next = new Set(prev)
                         if (next.has(i)) next.delete(i)
                         else next.add(i)
                         return next
                       })
+                      setCollapsedFiles(prev => {
+                        const next = new Set(prev)
+                        if (willBeViewed) next.add(i)
+                        else next.delete(i)
+                        return next
+                      })
                     }}
                   />
                 </div>
                 {!collapsedFiles.has(i) && (
-                  <div className="py-2">
+                  <div className="py-2" style={{ minWidth: 'fit-content' }}>
                     {f.lines.map((line, li) => (
                       <DiffLine key={li} type={line.type} lineNumber={line.lineNumber} content={line.content} />
                     ))}

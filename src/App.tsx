@@ -42,7 +42,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center" style={{ background: '#0D1117', color: '#8B949E', fontSize: '14px' }}>
+      <div className="h-screen w-screen flex items-center justify-center" style={{ background: '#0D1117', color: '#9DA5AE', fontSize: '14px' }}>
         Loading repository...
       </div>
     )
@@ -58,12 +58,12 @@ export default function App() {
         <h1 style={{ color: '#E6EDF3', fontSize: '24px', fontWeight: 600, margin: 0 }}>
           Not a Git Repository
         </h1>
-        <p style={{ color: '#8B949E', fontSize: '14px', maxWidth: '400px', textAlign: 'center', lineHeight: '1.6', margin: 0 }}>
+        <p style={{ color: '#9DA5AE', fontSize: '14px', maxWidth: '400px', textAlign: 'center', lineHeight: '1.6', margin: 0 }}>
           VisualGit needs to run inside a git repository.
           Navigate to a project with <code style={{ color: '#58A6FF', background: '#161B22', padding: '2px 6px', borderRadius: '4px' }}>git init</code> and try again.
         </p>
         <div style={{ color: '#484F58', fontSize: '12px', marginTop: '8px' }}>
-          Run <code style={{ color: '#8B949E', background: '#161B22', padding: '2px 6px', borderRadius: '4px' }}>cd your-project && visualgit</code>
+          Run <code style={{ color: '#9DA5AE', background: '#161B22', padding: '2px 6px', borderRadius: '4px' }}>cd your-project && visualgit</code>
         </div>
       </div>
     )
@@ -144,7 +144,7 @@ export default function App() {
             style={{ background: '#161B22', border: 'none', borderLeft: '1px solid #30363D' }}
             onClick={() => setAiPanelOpen(true)}
           >
-            <PanelRight size={14} color="#8B949E" />
+            <PanelRight size={14} color="#9DA5AE" />
           </button>
         )}
       </div>
