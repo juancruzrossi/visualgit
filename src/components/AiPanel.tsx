@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { ChevronDown, Loader2, FileText, ScanSearch, Layers, PanelRightClose } from 'lucide-react'
 
 type LoadingPhase = null | 'connecting' | 'analyzing' | 'streaming'
@@ -156,8 +157,35 @@ export function AiPanel({
 
       <div className="flex-1 overflow-y-auto p-4" style={{ fontSize: '12px', lineHeight: '1.6' }}>
         {analysis ? (
-          <div className="whitespace-pre-wrap" style={{ color: '#E6EDF3' }}>
-            {analysis}
+          <div className="ai-markdown" style={{ color: '#E6EDF3' }}>
+            <ReactMarkdown
+              components={{
+                h1: ({ children }) => <h1 style={{ color: '#58A6FF', fontSize: '16px', fontWeight: 600, margin: '12px 0 6px' }}>{children}</h1>,
+                h2: ({ children }) => <h2 style={{ color: '#58A6FF', fontSize: '14px', fontWeight: 600, margin: '10px 0 4px' }}>{children}</h2>,
+                h3: ({ children }) => <h3 style={{ color: '#79C0FF', fontSize: '13px', fontWeight: 600, margin: '8px 0 4px' }}>{children}</h3>,
+                p: ({ children }) => <p style={{ margin: '4px 0' }}>{children}</p>,
+                ul: ({ children }) => <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>{children}</ul>,
+                ol: ({ children }) => <ol style={{ margin: '4px 0', paddingLeft: '20px' }}>{children}</ol>,
+                li: ({ children }) => <li style={{ margin: '2px 0' }}>{children}</li>,
+                strong: ({ children }) => <strong style={{ color: '#F0F6FC', fontWeight: 600 }}>{children}</strong>,
+                em: ({ children }) => <em style={{ color: '#D2A8FF' }}>{children}</em>,
+                code: ({ children, className }) => {
+                  const isBlock = className?.includes('language-')
+                  if (isBlock) {
+                    return (
+                      <pre style={{ background: '#161B22', border: '1px solid #30363D', borderRadius: '4px', padding: '8px', margin: '6px 0', overflowX: 'auto' }}>
+                        <code style={{ color: '#E6EDF3', fontSize: '11px', fontFamily: 'monospace' }}>{children}</code>
+                      </pre>
+                    )
+                  }
+                  return <code style={{ background: '#1C2128', color: '#79C0FF', padding: '1px 4px', borderRadius: '3px', fontSize: '11px', fontFamily: 'monospace' }}>{children}</code>
+                },
+                pre: ({ children }) => <>{children}</>,
+                hr: () => <hr style={{ border: 'none', borderTop: '1px solid #30363D', margin: '8px 0' }} />,
+              }}
+            >
+              {analysis}
+            </ReactMarkdown>
             {isLoading && (
               <span
                 className="inline-block w-[2px] h-[14px] ml-0.5 cursor-blink align-middle"

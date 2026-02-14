@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express'
 import { AiService, type AiProvider, type AnalysisMode, type ClaudeModel } from '../services/ai.service.js'
 
-export function createAiRouter(): Router {
+export function createAiRouter(repoPath: string): Router {
   const router = Router()
   const aiService = new AiService()
 
@@ -26,7 +26,7 @@ export function createAiRouter(): Router {
     })
 
     try {
-      for await (const chunk of aiService.analyze(provider, mode, content, filePath, model)) {
+      for await (const chunk of aiService.analyze(provider, mode, content, filePath, model, repoPath)) {
         res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`)
       }
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`)
