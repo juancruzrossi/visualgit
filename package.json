@@ -1,6 +1,6 @@
 {
   "name": "@jxtools/visualgit",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "description": "Terminal-style git diff viewer with AI-powered explanations",
   "type": "module",
   "bin": {
