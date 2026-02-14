@@ -28,7 +28,7 @@ This opens a browser window with a visual diff between your current branch and i
 ## Update
 
 ```bash
-npm update -g @jxtools/visualgit
+visualgit update
 ```
 
 ## Requirements
