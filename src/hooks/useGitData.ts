@@ -4,8 +4,6 @@ interface GitInfo {
   repoName: string
   currentBranch: string
   baseBranch: string
-  ahead: number
-  behind: number
 }
 
 interface DiffLine {

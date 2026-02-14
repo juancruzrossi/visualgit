@@ -50,9 +50,4 @@ describe('GitService', () => {
     expect(name).toBe('web-platform')
   })
 
-  it('counts commits ahead/behind', async () => {
-    (mockGit.raw as any).mockResolvedValue('1\t3\n')
-    const result = await service.getAheadBehind('develop', 'feature/auth')
-    expect(result).toEqual({ ahead: 3, behind: 1 })
-  })
 })

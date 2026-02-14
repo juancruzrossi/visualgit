@@ -42,13 +42,4 @@ export class GitService {
     return 'repo'
   }
 
-  async getAheadBehind(baseBranch: string, currentBranch: string): Promise<{ ahead: number; behind: number }> {
-    try {
-      const result = await this.git.raw(['rev-list', '--left-right', '--count', `${baseBranch}...${currentBranch}`])
-      const [behind, ahead] = result.trim().split('\t').map(Number)
-      return { ahead: ahead || 0, behind: behind || 0 }
-    } catch {
-      return { ahead: 0, behind: 0 }
-    }
-  }
 }
