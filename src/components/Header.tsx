@@ -1,4 +1,4 @@
-import { GitBranch, ArrowLeft, Circle } from 'lucide-react'
+import { GitBranch, ArrowRight, Circle } from 'lucide-react'
 
 interface HeaderProps {
   repoName: string
@@ -20,9 +20,9 @@ export function Header({ repoName, currentBranch, baseBranch, ahead, behind }: H
           <span style={{ color: '#E6EDF3', fontSize: '14px' }}>{repoName}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span style={{ color: '#58A6FF', fontSize: '13px' }}>{currentBranch}</span>
-          <ArrowLeft size={14} color="#8B949E" />
           <span style={{ color: '#8B949E', fontSize: '13px' }}>{baseBranch}</span>
+          <ArrowRight size={14} color="#8B949E" />
+          <span style={{ color: '#58A6FF', fontSize: '13px' }}>{currentBranch}</span>
         </div>
       </div>
       <div className="flex items-center gap-3">

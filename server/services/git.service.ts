@@ -1,4 +1,4 @@
-import simpleGit, { type SimpleGit } from 'simple-git'
+import { simpleGit, type SimpleGit } from 'simple-git'
 
 export class GitService {
   private git: SimpleGit
@@ -35,11 +35,11 @@ export class GitService {
       const origin = remotes.find(r => r.name === 'origin')
       if (origin?.refs?.fetch) {
         const url = origin.refs.fetch
-        const match = url.match(/[:/]([^/]+\/[^/]+?)(?:\.git)?$/)
-        return match ? match[1] : 'unknown/repo'
+        const match = url.match(/\/([^/]+?)(?:\.git)?$/)
+        return match ? match[1] : 'unknown'
       }
     } catch { /* fallback */ }
-    return 'local/repo'
+    return 'repo'
   }
 
   async getAheadBehind(baseBranch: string, currentBranch: string): Promise<{ ahead: number; behind: number }> {

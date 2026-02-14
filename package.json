@@ -1,24 +1,36 @@
 {
-  "name": "visualgit",
+  "name": "@jxtools/visualgit",
   "version": "1.0.0",
   "description": "Terminal-style git diff viewer with AI-powered explanations",
   "type": "module",
   "bin": {
-    "visualgit": "./bin/cli.js"
+    "visualgit": "bin/cli.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
     "bin/",
     "dist/",
-    "server/"
+    "dist-server/"
   ],
   "scripts": {
     "dev": "vite",
     "dev:server": "tsx watch server/index.ts",
-    "build": "vite build",
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "build:frontend": "vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "keywords": ["git", "diff", "viewer", "ai", "terminal"],
+  "keywords": [
+    "git",
+    "diff",
+    "viewer",
+    "ai",
+    "terminal"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {

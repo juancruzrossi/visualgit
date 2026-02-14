@@ -40,15 +40,21 @@ export class AiService {
 
     const result: string = await new Promise((resolve, reject) => {
       let data = ''
+      let stderr = ''
       proc.stdout.on('data', (chunk: Buffer) => {
         data += chunk.toString()
       })
-      proc.stdout.on('end', () => resolve(data))
       proc.stderr.on('data', (chunk: Buffer) => {
-        const err = chunk.toString()
-        if (err.trim()) reject(new Error(err))
+        stderr += chunk.toString()
       })
       proc.on('error', reject)
+      proc.on('close', (code) => {
+        if (code !== 0 && !data) {
+          reject(new Error(stderr.trim() || `Process exited with code ${code}`))
+        } else {
+          resolve(data)
+        }
+      })
     })
 
     if (provider === 'claude') this.hasConversation = true

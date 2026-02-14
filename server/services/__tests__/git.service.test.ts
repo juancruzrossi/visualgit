@@ -47,7 +47,7 @@ describe('GitService', () => {
   it('gets repo name from remote', async () => {
     (mockGit.getRemotes as any).mockResolvedValue([{ name: 'origin', refs: { fetch: 'git@github.com:acme/web-platform.git' } }])
     const name = await service.getRepoName()
-    expect(name).toBe('acme/web-platform')
+    expect(name).toBe('web-platform')
   })
 
   it('counts commits ahead/behind', async () => {

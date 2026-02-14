@@ -6,16 +6,16 @@ import { fileURLToPath } from 'url'
 import { spawn } from 'child_process'
 
 const repoPath = process.cwd()
-
-if (!existsSync(resolve(repoPath, '.git'))) {
-  console.error('\x1b[31mError:\x1b[0m Not a git repository.')
-  console.error('Run this command from inside a git repository.')
-  process.exit(1)
-}
+const isGitRepo = existsSync(resolve(repoPath, '.git'))
 
 async function main() {
   const __dirname = dirname(fileURLToPath(import.meta.url))
-  const serverPath = resolve(__dirname, '..', 'server', 'index.ts')
+  const serverPath = resolve(__dirname, '..', 'dist-server', 'index.js')
+
+  if (!existsSync(serverPath)) {
+    console.error('\x1b[31mError:\x1b[0m Server files not found. Try reinstalling: npm install -g visualgit')
+    process.exit(1)
+  }
 
   const detectPort = (await import('detect-port')).default
   const open = (await import('open')).default
@@ -23,9 +23,14 @@ async function main() {
   const port = await detectPort(4321)
   const url = `http://localhost:${port}`
 
-  const child = spawn('node', ['--import', 'tsx', serverPath], {
+  const child = spawn('node', [serverPath], {
     stdio: 'inherit',
-    env: { ...process.env, REPO_PATH: repoPath, PORT: String(port) },
+    env: {
+      ...process.env,
+      REPO_PATH: repoPath,
+      PORT: String(port),
+      IS_GIT_REPO: String(isGitRepo),
+    },
   })
 
   child.on('error', (err) => {
@@ -33,10 +38,14 @@ async function main() {
     process.exit(1)
   })
 
-  // Wait for server to be ready, then open browser
   setTimeout(() => {
-    console.log(`\x1b[32m✓\x1b[0m VisualGit running at \x1b[36m${url}\x1b[0m`)
-    console.log(`  Repo: ${repoPath}`)
+    if (isGitRepo) {
+      console.log(`\x1b[32m✓\x1b[0m VisualGit running at \x1b[36m${url}\x1b[0m`)
+      console.log(`  Repo: ${repoPath}`)
+    } else {
+      console.log(`\x1b[33m⚠\x1b[0m VisualGit running at \x1b[36m${url}\x1b[0m`)
+      console.log(`  \x1b[33mNot a git repository\x1b[0m`)
+    }
     console.log(`  Press \x1b[33mCtrl+C\x1b[0m to stop\n`)
     open(url)
   }, 1500)
