@@ -5,4 +5,4 @@ dist-server/
 .env.local
 *.log
 *.pen
-docs/plans/
+docs/
