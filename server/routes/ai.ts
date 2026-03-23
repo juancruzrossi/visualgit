@@ -14,6 +14,12 @@ export function createAiRouter(repoPath: string): Router {
       model?: ClaudeModel
     }
 
+    const validProviders: AiProvider[] = ['claude', 'openai']
+    if (!validProviders.includes(provider)) {
+      res.status(400).json({ error: `Invalid provider. Must be one of: ${validProviders.join(', ')}` })
+      return
+    }
+
     if (!content) {
       res.status(400).json({ error: 'content is required' })
       return

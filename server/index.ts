@@ -7,10 +7,14 @@ import { createAiRouter } from './routes/ai.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-export function createServer(repoPath: string, isGitRepo = true) {
+export function createServer(repoPath: string, isGitRepo = true, port?: number) {
   const app = express()
 
-  app.use(cors())
+  const allowedOrigins = [
+    `http://localhost:${port || 4321}`,
+    `http://127.0.0.1:${port || 4321}`,
+  ]
+  app.use(cors({ origin: allowedOrigins }))
   app.use(express.json({ limit: '5mb' }))
 
   app.use('/api/git', createGitRouter(repoPath, isGitRepo))
@@ -33,6 +37,6 @@ if (isDirectRun) {
   const repoPath = process.env.REPO_PATH || process.cwd()
   const port = parseInt(process.env.PORT || '4321', 10)
   const isGitRepo = process.env.IS_GIT_REPO !== 'false'
-  const app = createServer(repoPath, isGitRepo)
+  const app = createServer(repoPath, isGitRepo, port)
   app.listen(port)
 }
