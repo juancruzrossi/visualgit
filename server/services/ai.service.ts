@@ -5,8 +5,6 @@ export type AnalysisMode = 'full' | 'file' | 'selection'
 export type ClaudeModel = 'opus' | 'sonnet' | 'haiku'
 
 export class AiService {
-  private hasConversation = false
-
   buildPrompt(mode: AnalysisMode, content: string, filePath?: string): string {
     const systemRules = [
       'Format your response using Markdown (headings, bold, bullet points, inline code).',
@@ -26,9 +24,7 @@ export class AiService {
 
   getCommand(provider: AiProvider, model: ClaudeModel = 'sonnet'): { command: string; args: string[]; useStdin: boolean } {
     if (provider === 'claude') {
-      const args = ['-p', '--model', model]
-      if (this.hasConversation) args.push('--continue')
-      return { command: 'claude', args, useStdin: true }
+      return { command: 'claude', args: ['-p', '--model', model], useStdin: true }
     }
     return {
       command: 'openai',
@@ -70,8 +66,6 @@ export class AiService {
         }
       })
     })
-
-    if (provider === 'claude') this.hasConversation = true
 
     if (result) {
       const words = result.split(' ')

@@ -40,6 +40,7 @@ export function useGitData() {
     async function fetchData() {
       try {
         const statusRes = await fetch('/api/git/status')
+        if (!statusRes.ok) throw new Error(`Server error: ${statusRes.status}`)
         const status = await statusRes.json()
 
         if (!status.isGitRepo) {
