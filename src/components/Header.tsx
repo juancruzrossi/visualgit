@@ -1,4 +1,5 @@
 import { GitBranch, ArrowRight } from 'lucide-react'
+import { fontSizes, tokens } from '../lib/tokens'
 
 interface HeaderProps {
   repoName: string
@@ -10,17 +11,17 @@ export function Header({ repoName, currentBranch, baseBranch }: HeaderProps) {
   return (
     <header
       className="h-12 shrink-0 flex items-center justify-between px-6"
-      style={{ borderBottom: '1px solid #30363D' }}
+      style={{ borderBottom: `1px solid ${tokens.border.default}` }}
     >
       <div className="flex items-center gap-8">
         <div className="flex items-center gap-2">
-          <GitBranch size={16} color="#E6EDF3" />
-          <span style={{ color: '#E6EDF3', fontSize: '14px' }}>{repoName}</span>
+          <GitBranch size={16} color={tokens.text.primary} />
+          <span style={{ color: tokens.text.primary, fontSize: fontSizes.repoName }}>{repoName}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span style={{ color: '#9DA5AE', fontSize: '13px' }}>{baseBranch}</span>
-          <ArrowRight size={14} color="#9DA5AE" />
-          <span style={{ color: '#58A6FF', fontSize: '13px' }}>{currentBranch}</span>
+          <span style={{ color: tokens.text.muted, fontSize: fontSizes.branchName }}>{baseBranch}</span>
+          <ArrowRight size={14} color={tokens.text.muted} />
+          <span style={{ color: tokens.accent.primary, fontSize: fontSizes.branchName }}>{currentBranch}</span>
         </div>
       </div>
     </header>

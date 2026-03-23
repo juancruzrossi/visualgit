@@ -1,8 +1,11 @@
 import { spawn } from 'child_process'
+import type { AiProvider, AnalysisMode, ClaudeModel } from '../../shared/types.js'
 
-export type AiProvider = 'claude' | 'openai'
-export type AnalysisMode = 'full' | 'file' | 'selection'
-export type ClaudeModel = 'opus' | 'sonnet' | 'haiku'
+function createAbortError(): Error {
+  const error = new Error('Analysis aborted')
+  error.name = 'AbortError'
+  return error
+}
 
 export class AiService {
   buildPrompt(mode: AnalysisMode, content: string, filePath?: string): string {
@@ -33,7 +36,15 @@ export class AiService {
     }
   }
 
-  async *analyze(provider: AiProvider, mode: AnalysisMode, content: string, filePath?: string, model?: ClaudeModel, repoPath?: string): AsyncGenerator<string> {
+  async *analyze(
+    provider: AiProvider,
+    mode: AnalysisMode,
+    content: string,
+    filePath?: string,
+    model?: ClaudeModel,
+    repoPath?: string,
+    signal?: AbortSignal,
+  ): AsyncGenerator<string> {
     const prompt = this.buildPrompt(mode, content, filePath)
     const { command, args, useStdin } = this.getCommand(provider, model)
 
@@ -42,36 +53,60 @@ export class AiService {
 
     const cwd = repoPath || process.cwd()
     const proc = spawn(command, args, { env, cwd, stdio: ['pipe', 'pipe', 'pipe'] })
+    const timeout = setTimeout(() => {
+      if (!proc.killed) {
+        proc.kill()
+      }
+    }, 120000)
+
+    const handleAbort = () => {
+      if (!proc.killed) {
+        proc.kill()
+      }
+    }
+
+    signal?.addEventListener('abort', handleAbort, { once: true })
 
     if (useStdin) {
       proc.stdin.write(prompt)
       proc.stdin.end()
     }
 
-    const result: string = await new Promise((resolve, reject) => {
-      let data = ''
-      let stderr = ''
-      proc.stdout.on('data', (chunk: Buffer) => {
-        data += chunk.toString()
-      })
-      proc.stderr.on('data', (chunk: Buffer) => {
-        stderr += chunk.toString()
-      })
-      proc.on('error', reject)
-      proc.on('close', (code) => {
-        if (code !== 0 && !data) {
-          reject(new Error(stderr.trim() || `Process exited with code ${code}`))
-        } else {
-          resolve(data)
-        }
-      })
-    })
+    try {
+      const result: string = await new Promise((resolve, reject) => {
+        let data = ''
+        let stderr = ''
+        proc.stdout.on('data', (chunk: Buffer) => {
+          data += chunk.toString()
+        })
+        proc.stderr.on('data', (chunk: Buffer) => {
+          stderr += chunk.toString()
+        })
+        proc.on('error', reject)
+        proc.on('close', (code) => {
+          if (signal?.aborted) {
+            reject(createAbortError())
+            return
+          }
 
-    if (result) {
-      const words = result.split(' ')
-      for (let i = 0; i < words.length; i += 3) {
-        yield words.slice(i, i + 3).join(' ') + ' '
+          if (code !== 0 && !data) {
+            reject(new Error(stderr.trim() || `Process exited with code ${code}`))
+            return
+          }
+
+          resolve(data)
+        })
+      })
+
+      if (result) {
+        const words = result.split(' ')
+        for (let i = 0; i < words.length; i += 3) {
+          yield words.slice(i, i + 3).join(' ') + ' '
+        }
       }
+    } finally {
+      clearTimeout(timeout)
+      signal?.removeEventListener('abort', handleAbort)
     }
   }
 }

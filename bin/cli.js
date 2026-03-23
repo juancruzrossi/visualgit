@@ -42,8 +42,26 @@ if (process.argv[2] === 'update') {
 const repoPath = process.cwd()
 const isGitRepo = existsSync(resolve(repoPath, '.git'))
 
+async function waitForServer(url) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    try {
+      const response = await fetch(`${url}/api/git/status`, {
+        signal: AbortSignal.timeout(1000),
+      })
+
+      if (response.ok) {
+        return
+      }
+    } catch {
+      // Keep polling until the server is ready or retries are exhausted.
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
+}
+
 async function main() {
-  const serverPath = resolve(__dirname, '..', 'dist-server', 'index.js')
+  const serverPath = resolve(__dirname, '..', 'dist-server', 'server', 'index.js')
 
   if (!existsSync(serverPath)) {
     console.error('\x1b[31mError:\x1b[0m Server files not found. Try reinstalling: npm install -g visualgit')
@@ -71,7 +89,7 @@ async function main() {
     process.exit(1)
   })
 
-  setTimeout(() => {
+  waitForServer(url).finally(() => {
     if (isGitRepo) {
       console.log(`\x1b[32m✓\x1b[0m VisualGit running at \x1b[36m${url}\x1b[0m`)
       console.log(`  Repo: ${repoPath}`)
@@ -81,7 +99,7 @@ async function main() {
     }
     console.log(`  Press \x1b[33mCtrl+C\x1b[0m to stop\n`)
     open(url)
-  }, 1500)
+  })
 
   child.on('close', (code) => process.exit(code ?? 0))
 

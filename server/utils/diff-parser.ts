@@ -1,56 +1,89 @@
-export interface DiffLine {
-  type: 'context' | 'addition' | 'deletion'
-  lineNumber: number
-  content: string
-}
+import type { DiffFile, DiffLine } from '../../shared/types.js'
 
-export interface DiffFile {
-  path: string
-  additions: number
-  deletions: number
-  lines: DiffLine[]
-}
+const HUNK_HEADER_REGEX = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/
 
 export function parseDiff(rawDiff: string): DiffFile[] {
   const files: DiffFile[] = []
   const fileSections = rawDiff.split(/^diff --git /m).filter(Boolean)
 
   for (const section of fileSections) {
-    const headerMatch = section.match(/a\/(.+?) b\/(.+)/)
+    const lines = section.split('\n')
+    const headerMatch = lines[0]?.match(/a\/(.+?) b\/(.+)/)
+
     if (!headerMatch) continue
 
-    const path = headerMatch[2]
-    const lines: DiffLine[] = []
+    const parsedLines: DiffLine[] = []
     let additions = 0
     let deletions = 0
+    let oldLineNumber = 0
+    let newLineNumber = 0
+    let inHunk = false
 
-    const hunks = section.split(/^@@\s+-\d+(?:,\d+)?\s+\+(\d+)(?:,\d+)?\s+@@.*$/m)
+    for (const line of lines.slice(1)) {
+      const hunkMatch = line.match(HUNK_HEADER_REGEX)
+      if (hunkMatch) {
+        oldLineNumber = Number.parseInt(hunkMatch[1], 10)
+        newLineNumber = Number.parseInt(hunkMatch[2], 10)
+        inHunk = true
+        continue
+      }
 
-    for (let h = 1; h < hunks.length; h += 2) {
-      let lineNum = parseInt(hunks[h], 10)
-      const hunkBody = hunks[h + 1]
-      if (!hunkBody) continue
+      if (!inHunk || line.startsWith('+++') || line.startsWith('---') || line.startsWith('\\')) {
+        continue
+      }
 
-      const hunkLines = hunkBody.split('\n')
+      if (line.startsWith('+')) {
+        parsedLines.push({
+          type: 'addition',
+          newLineNumber,
+          content: line.slice(1),
+        })
+        additions += 1
+        newLineNumber += 1
+        continue
+      }
 
-      for (const line of hunkLines) {
-        if (line.startsWith('+')) {
-          lines.push({ type: 'addition', lineNumber: lineNum, content: line.slice(1) })
-          additions++
-          lineNum++
-        } else if (line.startsWith('-')) {
-          lines.push({ type: 'deletion', lineNumber: lineNum, content: line.slice(1) })
-          deletions++
-        } else if (line.startsWith(' ') || line === '') {
-          if (line !== '' || lines.length > 0) {
-            lines.push({ type: 'context', lineNumber: lineNum, content: line.startsWith(' ') ? line.slice(1) : '' })
-            lineNum++
-          }
-        }
+      if (line.startsWith('-')) {
+        parsedLines.push({
+          type: 'deletion',
+          oldLineNumber,
+          content: line.slice(1),
+        })
+        deletions += 1
+        oldLineNumber += 1
+        continue
+      }
+
+      if (line.startsWith(' ')) {
+        parsedLines.push({
+          type: 'context',
+          oldLineNumber,
+          newLineNumber,
+          content: line.slice(1),
+        })
+        oldLineNumber += 1
+        newLineNumber += 1
+        continue
+      }
+
+      if (line === '') {
+        parsedLines.push({
+          type: 'context',
+          oldLineNumber,
+          newLineNumber,
+          content: '',
+        })
+        oldLineNumber += 1
+        newLineNumber += 1
       }
     }
 
-    files.push({ path, additions, deletions, lines })
+    files.push({
+      path: headerMatch[2],
+      additions,
+      deletions,
+      lines: parsedLines,
+    })
   }
 
   return files

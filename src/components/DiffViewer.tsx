@@ -1,300 +1,136 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { FileCode, Folder, FolderOpen, ChevronRight, ChevronDown, PanelLeftClose, PanelLeft, ScanSearch, Check } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { PanelLeft, PanelLeftClose, ScanSearch } from 'lucide-react'
+import type { DiffFile } from '@shared/types'
 import { FileHeader } from './FileHeader'
+import { FileTree, buildTree, collectFolderPaths } from './FileTree'
 import { DiffLine } from './DiffLine'
-
-interface DiffLineData {
-  type: 'context' | 'addition' | 'deletion'
-  lineNumber: number
-  content: string
-}
-
-interface DiffFileData {
-  path: string
-  additions: number
-  deletions: number
-  lines: DiffLineData[]
-}
+import { useResizablePanel } from '../hooks/useResizablePanel'
+import { useScrollTracking } from '../hooks/useScrollTracking'
+import { useTextSelection } from '../hooks/useTextSelection'
+import { tokens } from '../lib/tokens'
 
 interface DiffViewerProps {
-  files: DiffFileData[]
+  files: DiffFile[]
   selectedFile: number
   onSelectFile: (index: number) => void
   onSelectionChange: (text: string | null) => void
   onAnalyzeSelection: () => void
 }
 
-interface TreeNode {
-  name: string
-  children: Map<string, TreeNode>
-  fileIndex?: number
-  additions?: number
-  deletions?: number
-}
-
-function buildTree(files: DiffFileData[]): TreeNode {
-  const root: TreeNode = { name: '', children: new Map() }
-  files.forEach((f, i) => {
-    const parts = f.path.split('/')
-    let current = root
-    parts.forEach((part, pi) => {
-      if (!current.children.has(part)) {
-        current.children.set(part, { name: part, children: new Map() })
-      }
-      current = current.children.get(part)!
-      if (pi === parts.length - 1) {
-        current.fileIndex = i
-        current.additions = f.additions
-        current.deletions = f.deletions
-      }
-    })
-  })
-  return root
-}
-
-function TreeItem({ node, depth, selectedFile, onSelectFile, expandedFolders, toggleFolder, viewedFiles }: {
-  node: TreeNode
-  depth: number
-  selectedFile: number
-  onSelectFile: (i: number) => void
-  expandedFolders: Set<string>
-  toggleFolder: (path: string) => void
-  viewedFiles: Set<number>
-}) {
-  const isFile = node.fileIndex !== undefined
-  const isSelected = isFile && node.fileIndex === selectedFile
-  const isViewed = isFile && viewedFiles.has(node.fileIndex!)
-  const children = Array.from(node.children.values())
-  const folders = children.filter(c => c.fileIndex === undefined || c.children.size > 0)
-  const fileNodes = children.filter(c => c.fileIndex !== undefined && c.children.size === 0)
-  const sorted = [...folders, ...fileNodes]
-
-  if (isFile && node.children.size === 0) {
-    return (
-      <button
-        className="flex items-center gap-1.5 py-1 text-left cursor-pointer w-full"
-        style={{
-          paddingLeft: `${depth * 12 + 8}px`,
-          background: isSelected ? '#1C2128' : 'transparent',
-          border: 'none',
-          borderLeft: isSelected ? '2px solid #58A6FF' : '2px solid transparent',
-        }}
-        onClick={() => onSelectFile(node.fileIndex!)}
-      >
-        {isViewed ? (
-          <Check size={12} color="#3FB950" className="shrink-0" />
-        ) : (
-          <FileCode size={12} color={isSelected ? '#58A6FF' : '#9DA5AE'} className="shrink-0" />
-        )}
-        <span className="truncate" style={{ color: isViewed ? '#9DA5AE' : isSelected ? '#E6EDF3' : '#C9D1D9', fontSize: '12px' }}>
-          {node.name}
-        </span>
-        <span className="ml-auto shrink-0 flex gap-1 pr-2" style={{ fontSize: '11px' }}>
-          <span style={{ color: '#3FB950' }}>+{node.additions}</span>
-          <span style={{ color: '#F47067' }}>-{node.deletions}</span>
-        </span>
-      </button>
-    )
-  }
-
-  const folderPath = `${depth}-${node.name}`
-  const isOpen = expandedFolders.has(folderPath)
-  const FolderIcon = isOpen ? FolderOpen : Folder
-  const ChevronIcon = isOpen ? ChevronDown : ChevronRight
-
-  return (
-    <>
-      <button
-        className="flex items-center gap-1.5 py-1 text-left cursor-pointer w-full"
-        style={{ paddingLeft: `${depth * 12 + 8}px`, background: 'transparent', border: 'none' }}
-        onClick={() => toggleFolder(folderPath)}
-      >
-        <ChevronIcon size={10} color="#484F58" className="shrink-0" />
-        <FolderIcon size={12} color="#9DA5AE" className="shrink-0" />
-        <span style={{ color: '#9DA5AE', fontSize: '12px' }}>{node.name}</span>
-      </button>
-      {isOpen && sorted.map(child => (
-        <TreeItem
-          key={child.name}
-          node={child}
-          depth={depth + 1}
-          selectedFile={selectedFile}
-          onSelectFile={onSelectFile}
-          expandedFolders={expandedFolders}
-          toggleFolder={toggleFolder}
-          viewedFiles={viewedFiles}
-        />
-      ))}
-    </>
-  )
-}
-
-export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChange, onAnalyzeSelection }: DiffViewerProps) {
+export function DiffViewer({
+  files,
+  selectedFile,
+  onSelectFile,
+  onSelectionChange,
+  onAnalyzeSelection,
+}: DiffViewerProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [sidebarWidth, setSidebarWidth] = useState(240)
-  const [selectionPopup, setSelectionPopup] = useState<{ x: number; y: number } | null>(null)
   const [collapsedFiles, setCollapsedFiles] = useState<Set<number>>(new Set())
   const [viewedFiles, setViewedFiles] = useState<Set<number>>(new Set())
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const tree = useMemo(() => buildTree(files), [files])
   const scrollRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<HTMLDivElement>(null)
-  const fileRefs = useRef<(HTMLDivElement | null)[]>([])
-  const isScrollingTo = useRef(false)
-
-  const handleSidebarDragStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    const viewer = viewerRef.current
-    if (!viewer) return
-    const onMouseMove = (e: MouseEvent) => {
-      const rect = viewer.getBoundingClientRect()
-      const px = e.clientX - rect.left
-      setSidebarWidth(Math.max(150, Math.min(400, px)))
-    }
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-  }, [])
-
-  // Text selection detection
-  useEffect(() => {
-    const handleMouseUp = () => {
-      const sel = window.getSelection()
-      const text = sel?.toString().trim()
-      if (text && text.length > 3 && scrollRef.current?.contains(sel?.anchorNode ?? null)) {
-        onSelectionChange(text)
-        const range = sel!.getRangeAt(0)
-        const rect = range.getBoundingClientRect()
-        const containerRect = scrollRef.current!.getBoundingClientRect()
-        setSelectionPopup({
-          x: rect.left - containerRect.left + rect.width / 2,
-          y: rect.top - containerRect.top - 8,
-        })
-      } else {
-        onSelectionChange(null)
-        setSelectionPopup(null)
-      }
-    }
-    document.addEventListener('mouseup', handleMouseUp)
-    return () => document.removeEventListener('mouseup', handleMouseUp)
-  }, [onSelectionChange])
-
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
-    const set = new Set<string>()
-    function walk(node: TreeNode, depth: number) {
-      if (node.children.size > 0 && node.name) {
-        set.add(`${depth}-${node.name}`)
-      }
-      node.children.forEach(child => walk(child, depth + 1))
-    }
-    walk(tree, 0)
-    return set
+  const fileRefs = useRef<Array<HTMLDivElement | null>>([])
+  const { size: sidebarWidth, startResizing, nudgeSize } = useResizablePanel({
+    containerRef: viewerRef,
+    initialSize: 240,
+    minSize: 150,
+    maxSize: 400,
+    getNextSize: useCallback((event, rect) => event.clientX - rect.left, []),
+  })
+  const { selectedText, selectionPosition, clearSelection } = useTextSelection(scrollRef)
+  const { scrollToFile } = useScrollTracking({
+    scrollRef,
+    fileRefs,
+    selectedFile,
+    onSelectFile,
+    syncKey: Array.from(collapsedFiles).sort((left, right) => left - right).join(':'),
   })
 
-  const toggleFolder = (path: string) => {
+  useEffect(() => {
+    onSelectionChange(selectedText)
+  }, [onSelectionChange, selectedText])
+
+  useEffect(() => {
+    setExpandedFolders(new Set(collectFolderPaths(tree)))
+  }, [tree])
+
+  const toggleFolder = useCallback((path: string) => {
     setExpandedFolders(prev => {
       const next = new Set(prev)
       if (next.has(path)) next.delete(path)
       else next.add(path)
       return next
     })
-  }
+  }, [])
 
-  const handleSelectFile = useCallback((index: number) => {
-    onSelectFile(index)
-    const el = fileRefs.current[index]
-    if (el && scrollRef.current) {
-      isScrollingTo.current = true
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      setTimeout(() => { isScrollingTo.current = false }, 500)
-    }
-  }, [onSelectFile])
+  const toggleCollapsed = useCallback((index: number) => {
+    setCollapsedFiles(prev => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }, [])
 
-  // Track which file is visible while scrolling
-  const handleScroll = useCallback(() => {
-    if (isScrollingTo.current || !scrollRef.current) return
-    const container = scrollRef.current
-    const scrollTop = container.scrollTop
-    for (let i = fileRefs.current.length - 1; i >= 0; i--) {
-      const el = fileRefs.current[i]
-      if (el && el.offsetTop <= scrollTop + 60) {
-        if (i !== selectedFile) onSelectFile(i)
-        break
-      }
-    }
-  }, [selectedFile, onSelectFile])
+  const toggleViewed = useCallback((index: number) => {
+    const willBeViewed = !viewedFiles.has(index)
 
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    el.addEventListener('scroll', handleScroll, { passive: true })
-    return () => el.removeEventListener('scroll', handleScroll)
-  }, [handleScroll])
+    setViewedFiles(prev => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
 
-  // Recalculate visible file when collapse state changes
-  useEffect(() => {
-    if (!scrollRef.current) return
-    const container = scrollRef.current
-    const scrollTop = container.scrollTop
-    for (let i = fileRefs.current.length - 1; i >= 0; i--) {
-      const el = fileRefs.current[i]
-      if (el && el.offsetTop <= scrollTop + 60) {
-        if (i !== selectedFile) onSelectFile(i)
-        break
-      }
-    }
-  }, [collapsedFiles]) // eslint-disable-line react-hooks/exhaustive-deps
+    setCollapsedFiles(prev => {
+      const next = new Set(prev)
+      if (willBeViewed) next.add(index)
+      else next.delete(index)
+      return next
+    })
+  }, [viewedFiles])
 
   if (files.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center h-full" style={{ color: '#9DA5AE', fontSize: '13px' }}>
+      <div
+        className="flex-1 flex items-center justify-center h-full"
+        style={{ color: tokens.text.muted, fontSize: '13px' }}
+        role="status"
+        aria-live="polite"
+      >
         No diff available. Are you on a feature branch?
       </div>
     )
   }
 
-  const rootChildren = Array.from(tree.children.values())
-
   return (
     <div className="flex h-full" ref={viewerRef}>
       {sidebarOpen && (
         <>
-        <div
-          className="shrink-0 flex flex-col overflow-y-auto"
-          style={{ width: `${sidebarWidth}px`, background: '#161B22' }}
-        >
-          <div className="flex items-center justify-between px-3 h-10 shrink-0" style={{ borderBottom: '1px solid #30363D' }}>
-            <span style={{ color: '#9DA5AE', fontSize: '12px' }}>Files ({files.length})</span>
-            <button className="cursor-pointer" style={{ background: 'transparent', border: 'none' }} onClick={() => setSidebarOpen(false)}>
-              <PanelLeftClose size={14} color="#9DA5AE" />
-            </button>
+          <div className="shrink-0 flex flex-col overflow-y-auto" style={{ width: `${sidebarWidth}px`, background: tokens.background.secondary }}>
+            <div className="flex items-center justify-between px-3 h-10 shrink-0" style={{ borderBottom: `1px solid ${tokens.border.default}` }}>
+              <span style={{ color: tokens.text.muted, fontSize: '12px' }}>Files ({files.length})</span>
+              <button className="cursor-pointer" style={{ background: 'transparent', border: 'none' }} onClick={() => setSidebarOpen(false)}>
+                <PanelLeftClose size={14} color={tokens.text.muted} />
+              </button>
+            </div>
+            <FileTree files={files} selectedFile={selectedFile} onSelectFile={scrollToFile} expandedFolders={expandedFolders} onToggleFolder={toggleFolder} viewedFiles={viewedFiles} />
           </div>
-          <div className="py-1">
-            {rootChildren.map(child => (
-              <TreeItem
-                key={child.name}
-                node={child}
-                depth={0}
-                selectedFile={selectedFile}
-                onSelectFile={handleSelectFile}
-                expandedFolders={expandedFolders}
-                toggleFolder={toggleFolder}
-                viewedFiles={viewedFiles}
-              />
-            ))}
-          </div>
-        </div>
-        <div
-          className="w-1 shrink-0 cursor-col-resize hover:bg-[#58A6FF]/40 transition-colors"
-          style={{ background: '#30363D' }}
-          onMouseDown={handleSidebarDragStart}
-        />
+          <div
+            className="w-1 shrink-0 cursor-col-resize hover:opacity-80 transition-opacity"
+            style={{ background: tokens.border.default }}
+            onMouseDown={startResizing}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowLeft') nudgeSize(-10)
+              if (event.key === 'ArrowRight') nudgeSize(10)
+            }}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize file tree"
+            tabIndex={0}
+          />
         </>
       )}
 
@@ -303,83 +139,61 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
           {!sidebarOpen && (
             <button
               className="h-10 px-3 shrink-0 cursor-pointer flex items-center"
-              style={{ background: '#161B22', border: 'none', borderBottom: '1px solid #30363D', borderRight: '1px solid #30363D' }}
+              style={{ background: tokens.background.secondary, border: 'none', borderBottom: `1px solid ${tokens.border.default}`, borderRight: `1px solid ${tokens.border.default}` }}
               onClick={() => setSidebarOpen(true)}
             >
-              <PanelLeft size={14} color="#9DA5AE" />
+              <PanelLeft size={14} color={tokens.text.muted} />
             </button>
           )}
-          <div className="flex-1 h-10 flex items-center px-4 shrink-0" style={{ background: '#161B22', borderBottom: '1px solid #30363D' }}>
-            <span style={{ color: '#9DA5AE', fontSize: '12px' }}>
-              {viewedFiles.size > 0 ? (
-                <>{viewedFiles.size} / {files.length} files viewed</>
-              ) : (
-                <>{files.length} files</>
-              )}
+
+          <div className="flex-1 h-10 flex items-center px-4 shrink-0" style={{ background: tokens.background.secondary, borderBottom: `1px solid ${tokens.border.default}` }}>
+            <span style={{ color: tokens.text.muted, fontSize: '12px' }}>
+              {viewedFiles.size > 0 ? `${viewedFiles.size} / ${files.length} files viewed` : `${files.length} files`}
             </span>
           </div>
         </div>
+
         <div className="flex-1 overflow-auto relative" ref={scrollRef}>
-          {selectionPopup && (
+          {selectionPosition && selectedText && (
             <button
               className="absolute z-20 flex items-center gap-1 px-2.5 py-1.5 cursor-pointer -translate-x-1/2 -translate-y-full"
               style={{
-                left: selectionPopup.x,
-                top: selectionPopup.y,
-                background: '#161B22',
-                border: '1px solid #58A6FF',
+                left: selectionPosition.x,
+                top: selectionPosition.y,
+                background: tokens.background.secondary,
+                border: `1px solid ${tokens.accent.primary}`,
                 borderRadius: '6px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                boxShadow: tokens.shadow.popup,
               }}
-              onMouseDown={(e) => {
-                e.preventDefault()
+              onMouseDown={event => {
+                event.preventDefault()
                 onAnalyzeSelection()
-                setSelectionPopup(null)
+                clearSelection()
               }}
             >
-              <ScanSearch size={12} color="#58A6FF" />
-              <span style={{ color: '#58A6FF', fontSize: '11px', whiteSpace: 'nowrap' }}>Analyze Selection</span>
+              <ScanSearch size={12} color={tokens.accent.primary} />
+              <span style={{ color: tokens.accent.primary, fontSize: '11px', whiteSpace: 'nowrap' }}>Analyze Selection</span>
             </button>
           )}
+
           <div>
-            {files.map((f, i) => (
-              <div key={f.path} ref={el => { fileRefs.current[i] = el }}>
+            {files.map((file, index) => (
+              <div key={file.path} ref={element => { fileRefs.current[index] = element }}>
                 <div className="sticky top-0 z-10">
                   <FileHeader
-                    path={f.path}
-                    additions={f.additions}
-                    deletions={f.deletions}
-                    collapsed={collapsedFiles.has(i)}
-                    onToggle={() => {
-                      setCollapsedFiles(prev => {
-                        const next = new Set(prev)
-                        if (next.has(i)) next.delete(i)
-                        else next.add(i)
-                        return next
-                      })
-                    }}
-                    viewed={viewedFiles.has(i)}
-                    onToggleViewed={() => {
-                      const willBeViewed = !viewedFiles.has(i)
-                      setViewedFiles(prev => {
-                        const next = new Set(prev)
-                        if (next.has(i)) next.delete(i)
-                        else next.add(i)
-                        return next
-                      })
-                      setCollapsedFiles(prev => {
-                        const next = new Set(prev)
-                        if (willBeViewed) next.add(i)
-                        else next.delete(i)
-                        return next
-                      })
-                    }}
+                    path={file.path}
+                    additions={file.additions}
+                    deletions={file.deletions}
+                    collapsed={collapsedFiles.has(index)}
+                    onToggle={() => toggleCollapsed(index)}
+                    viewed={viewedFiles.has(index)}
+                    onToggleViewed={() => toggleViewed(index)}
                   />
                 </div>
-                {!collapsedFiles.has(i) && (
+                {!collapsedFiles.has(index) && (
                   <div className="py-2" style={{ minWidth: 'fit-content' }}>
-                    {f.lines.map((line, li) => (
-                      <DiffLine key={li} type={line.type} lineNumber={line.lineNumber} content={line.content} />
+                    {file.lines.map((line, lineIndex) => (
+                      <DiffLine key={`${file.path}-${lineIndex}`} {...line} />
                     ))}
                   </div>
                 )}

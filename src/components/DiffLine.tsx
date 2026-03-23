@@ -1,16 +1,21 @@
-interface DiffLineProps {
-  type: 'context' | 'addition' | 'deletion'
-  lineNumber: number
-  content: string
-}
+import { memo } from 'react'
+import type { DiffLine as DiffLineData } from '@shared/types'
+import { tokens } from '../lib/tokens'
+
+type DiffLineProps = DiffLineData
 
 const lineStyles = {
-  context: { bg: 'transparent', text: '#9DA5AE', ln: '#484F58', prefix: ' ' },
-  addition: { bg: '#122117', text: '#7EE787', ln: '#3FB950', prefix: '+' },
-  deletion: { bg: '#2A1516', text: '#FFA198', ln: '#F47067', prefix: '-' },
-}
+  context: tokens.diff.context,
+  addition: tokens.diff.addition,
+  deletion: tokens.diff.deletion,
+} as const
 
-export function DiffLine({ type, lineNumber, content }: DiffLineProps) {
+export const DiffLine = memo(function DiffLine({
+  type,
+  oldLineNumber,
+  newLineNumber,
+  content,
+}: DiffLineProps) {
   const style = lineStyles[type]
 
   return (
@@ -20,9 +25,15 @@ export function DiffLine({ type, lineNumber, content }: DiffLineProps) {
     >
       <span
         className="w-12 shrink-0 text-right pr-3 select-none"
-        style={{ color: style.ln, fontSize: '12px' }}
+        style={{ color: style.line, fontSize: '12px' }}
       >
-        {lineNumber}
+        {oldLineNumber ?? ''}
+      </span>
+      <span
+        className="w-12 shrink-0 text-right pr-3 select-none"
+        style={{ color: style.line, fontSize: '12px' }}
+      >
+        {newLineNumber ?? ''}
       </span>
       <span
         className="flex-1 whitespace-pre"
@@ -32,4 +43,4 @@ export function DiffLine({ type, lineNumber, content }: DiffLineProps) {
       </span>
     </div>
   )
-}
+})
