@@ -8,8 +8,8 @@ import { useGitData } from './hooks/useGitData'
 import { useAiAnalysis } from './hooks/useAiAnalysis'
 
 export default function App() {
-  const { info, diff, loading, error, isGitRepo } = useGitData()
-  const { analysis, isLoading: aiLoading, loadingPhase, provider, setProvider, model, setModel, analyze } = useAiAnalysis()
+  const { info, diff, loading, error, isGitRepo, refetch } = useGitData()
+  const { analysis, isLoading: aiLoading, loadingPhase, provider, setProvider, model, setModel, analyze, cancel } = useAiAnalysis()
   const [selectedFile, setSelectedFile] = useState(0)
   const [diffWidth, setDiffWidth] = useState(65)
   const [aiPanelOpen, setAiPanelOpen] = useState(true)
@@ -42,7 +42,12 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center" style={{ background: '#0D1117', color: '#9DA5AE', fontSize: '14px' }}>
+      <div
+        className="h-screen w-screen flex items-center justify-center"
+        style={{ background: '#0D1117', color: '#9DA5AE', fontSize: '14px' }}
+        role="status"
+        aria-live="polite"
+      >
         Loading repository...
       </div>
     )
@@ -71,8 +76,22 @@ export default function App() {
 
   if (error) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center" style={{ background: '#0D1117', color: '#F85149', fontSize: '14px' }}>
-        {error}
+      <div className="h-screen w-screen flex items-center justify-center" style={{ background: '#0D1117' }}>
+        <div
+          className="flex flex-col items-center gap-3"
+          style={{ color: '#F85149', fontSize: '14px' }}
+          role="alert"
+          aria-live="assertive"
+        >
+          <span>{error}</span>
+          <button
+            className="cursor-pointer px-3 py-1.5"
+            style={{ border: '1px solid #30363D', borderRadius: '6px', background: '#161B22', color: '#E6EDF3' }}
+            onClick={() => void refetch()}
+          >
+            Retry
+          </button>
+        </div>
       </div>
     )
   }
@@ -132,6 +151,7 @@ export default function App() {
                 }}
                 currentFileName={currentFile?.path}
                 onClose={() => setAiPanelOpen(false)}
+                onCancel={cancel}
               />
             </div>
           </>

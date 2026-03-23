@@ -43,7 +43,7 @@ const repoPath = process.cwd()
 const isGitRepo = existsSync(resolve(repoPath, '.git'))
 
 async function main() {
-  const serverPath = resolve(__dirname, '..', 'dist-server', 'index.js')
+  const serverPath = resolve(__dirname, '..', 'dist-server', 'server', 'index.js')
 
   if (!existsSync(serverPath)) {
     console.error('\x1b[31mError:\x1b[0m Server files not found. Try reinstalling: npm install -g visualgit')

@@ -1,18 +1,36 @@
 import { describe, it, expect, vi } from 'vitest'
 import { AiService } from '../ai.service'
+import { EventEmitter } from 'events'
+import { Readable, Writable } from 'stream'
+
+type MockProcess = EventEmitter & {
+  stdout: Readable
+  stderr: Readable
+  stdin: Writable
+  killed: boolean
+  kill: ReturnType<typeof vi.fn>
+}
 
 vi.mock('child_process', () => {
-  const EventEmitter = require('events').EventEmitter
-  const { Readable, Writable } = require('stream')
   return {
     spawn: vi.fn(() => {
-      const proc = new EventEmitter()
+      const proc = new EventEmitter() as MockProcess
       const stdout = new Readable({ read() {} })
       const stderr = new Readable({ read() {} })
-      const stdin = new Writable({ write(_chunk: any, _enc: any, cb: any) { cb() } })
+      const stdin = new Writable({
+        write(_chunk: string | Buffer, _enc: BufferEncoding, cb: (error?: Error | null) => void) {
+          cb()
+        },
+      })
+
       proc.stdout = stdout
       proc.stderr = stderr
       proc.stdin = stdin
+      proc.killed = false
+      proc.kill = vi.fn(() => {
+        proc.killed = true
+        return true
+      })
 
       setTimeout(() => {
         stdout.push('This change refactors the auth logic.')

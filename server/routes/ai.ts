@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express'
-import { AiService, type AiProvider, type AnalysisMode, type ClaudeModel } from '../services/ai.service.js'
+import { AiService } from '../services/ai.service.js'
+import type { AiProvider, AnalysisMode, ClaudeModel } from '../../shared/types.js'
 
 export function createAiRouter(repoPath: string): Router {
   const router = Router()
@@ -31,15 +32,39 @@ export function createAiRouter(repoPath: string): Router {
       Connection: 'keep-alive',
     })
 
+    const controller = new AbortController()
+    let clientDisconnected = false
+
+    const handleClose = () => {
+      clientDisconnected = true
+      controller.abort()
+    }
+
+    req.on('close', handleClose)
+
     try {
-      for await (const chunk of aiService.analyze(provider, mode, content, filePath, model, repoPath)) {
+      for await (const chunk of aiService.analyze(provider, mode, content, filePath, model, repoPath, controller.signal)) {
+        if (clientDisconnected || controller.signal.aborted || res.writableEnded) {
+          break
+        }
         res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`)
       }
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`)
-    } catch {
-      res.write(`data: ${JSON.stringify({ error: 'AI analysis failed' })}\n\n`)
+      if (!clientDisconnected && !controller.signal.aborted && !res.writableEnded) {
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`)
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return
+      }
+
+      if (!res.writableEnded) {
+        res.write(`data: ${JSON.stringify({ error: 'AI analysis failed' })}\n\n`)
+      }
     } finally {
-      res.end()
+      req.off('close', handleClose)
+      if (!res.writableEnded) {
+        res.end()
+      }
     }
   })
 

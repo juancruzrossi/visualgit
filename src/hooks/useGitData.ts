@@ -1,33 +1,5 @@
-import { useState, useEffect } from 'react'
-
-interface GitInfo {
-  repoName: string
-  currentBranch: string
-  baseBranch: string
-}
-
-interface DiffLine {
-  type: 'context' | 'addition' | 'deletion'
-  lineNumber: number
-  content: string
-}
-
-interface DiffFile {
-  path: string
-  additions: number
-  deletions: number
-  lines: DiffLine[]
-}
-
-interface DiffData {
-  rawDiff: string
-  files: DiffFile[]
-  summary: {
-    filesChanged: number
-    totalAdditions: number
-    totalDeletions: number
-  }
-}
+import { useState, useEffect, useCallback } from 'react'
+import type { DiffData, GitDataResponse, GitInfo } from '@shared/types'
 
 export function useGitData() {
   const [info, setInfo] = useState<GitInfo | null>(null)
@@ -36,36 +8,38 @@ export function useGitData() {
   const [error, setError] = useState<string | null>(null)
   const [isGitRepo, setIsGitRepo] = useState(true)
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const statusRes = await fetch('/api/git/status')
-        if (!statusRes.ok) throw new Error(`Server error: ${statusRes.status}`)
-        const status = await statusRes.json()
+  const refetch = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true)
+    setError(null)
 
-        if (!status.isGitRepo) {
-          setIsGitRepo(false)
-          return
-        }
+    try {
+      const res = await fetch('/api/git/all', { signal })
+      if (!res.ok) throw new Error(`Server error: ${res.status}`)
 
-        const [infoRes, diffRes] = await Promise.all([
-          fetch('/api/git/info'),
-          fetch('/api/git/diff'),
-        ])
+      const data = await res.json() as GitDataResponse
 
-        if (!infoRes.ok || !diffRes.ok) throw new Error('Failed to fetch git data')
+      setIsGitRepo(data.isGitRepo)
+      setInfo(data.info)
+      setDiff(data.diff)
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return
+      }
 
-        setInfo(await infoRes.json())
-        setDiff(await diffRes.json())
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error')
-      } finally {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      if (!signal?.aborted) {
         setLoading(false)
       }
     }
-
-    fetchData()
   }, [])
 
-  return { info, diff, loading, error, isGitRepo }
+  useEffect(() => {
+    const controller = new AbortController()
+    void refetch(controller.signal)
+
+    return () => controller.abort()
+  }, [refetch])
+
+  return { info, diff, loading, error, isGitRepo, refetch }
 }

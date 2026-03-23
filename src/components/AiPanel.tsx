@@ -1,16 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { ChevronDown, Loader2, FileText, ScanSearch, Layers, PanelRightClose } from 'lucide-react'
-
-type LoadingPhase = null | 'connecting' | 'analyzing' | 'streaming'
-type ClaudeModel = 'opus' | 'sonnet' | 'haiku'
+import type { AiProvider, ClaudeModel, LoadingPhase } from '@shared/types'
 
 interface AiPanelProps {
   analysis: string
   isLoading: boolean
   loadingPhase: LoadingPhase
-  provider: 'claude' | 'openai'
-  onProviderChange: (provider: 'claude' | 'openai') => void
+  provider: AiProvider
+  onProviderChange: (provider: AiProvider) => void
   model: ClaudeModel
   onModelChange: (model: ClaudeModel) => void
   onAnalyzeFull: () => void
@@ -19,6 +17,7 @@ interface AiPanelProps {
   onAnalyzeSelection: () => void
   currentFileName?: string
   onClose: () => void
+  onCancel: () => void
 }
 
 const providers = [
@@ -41,7 +40,7 @@ const phaseMessages: Record<string, string> = {
 export function AiPanel({
   analysis, isLoading, loadingPhase, provider, onProviderChange,
   model, onModelChange,
-  onAnalyzeFull, onAnalyzeFile, hasSelection, onAnalyzeSelection, currentFileName, onClose,
+  onAnalyzeFull, onAnalyzeFile, hasSelection, onAnalyzeSelection, currentFileName, onClose, onCancel,
 }: AiPanelProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false)
@@ -237,6 +236,15 @@ export function AiPanel({
           >
             <ScanSearch size={14} color="#58A6FF" />
             <span style={{ color: '#58A6FF', fontSize: '12px' }}>Analyze Selection</span>
+          </button>
+        )}
+        {isLoading && (
+          <button
+            className="flex items-center justify-center gap-1.5 py-2 px-3 cursor-pointer"
+            style={btnStyle}
+            onClick={onCancel}
+          >
+            <span style={{ color: '#E6EDF3', fontSize: '12px' }}>Cancel Analysis</span>
           </button>
         )}
       </div>
