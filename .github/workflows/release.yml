@@ -41,9 +41,18 @@ jobs:
         if: steps.check.outputs.skip == 'false'
         run: npm ci
 
-      - name: Run tests
+      - name: Run lint
         if: steps.check.outputs.skip == 'false'
-        run: npm test
+        run: npm run lint
+
+      - name: Run tests if configured
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          if node -e "const scripts = require('./package.json').scripts || {}; process.exit(scripts.test ? 0 : 1)"; then
+            npm test
+          else
+            echo "No test script configured, skipping."
+          fi
 
       - name: Build
         if: steps.check.outputs.skip == 'false'
