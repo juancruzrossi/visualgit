@@ -1,6 +1,6 @@
 {
   "name": "@jxtools/visualgit",
-  "version": "1.5.11",
+  "version": "1.5.12",
   "description": "Terminal-style git diff viewer with AI-powered explanations",
   "type": "module",
   "bin": {
@@ -11,10 +11,12 @@
   },
   "files": [
     "bin/",
+    "scripts/",
     "dist/",
     "dist-server/"
   ],
   "scripts": {
+    "postinstall": "node scripts/postinstall.js",
     "dev": "vite",
     "dev:server": "tsx watch server/index.ts",
     "build": "vite build && tsc -p tsconfig.server.json",

@@ -3,10 +3,75 @@
 import { existsSync, readFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { spawn, execSync } from 'child_process'
+import { spawn, execFileSync } from 'child_process'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const pkgDir = resolve(__dirname, '..')
 const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf-8'))
+const registryFile = resolve(pkgDir, '.npm-registry')
+
+function savedRegistry() {
+  if (!existsSync(registryFile)) return ''
+  return readFileSync(registryFile, 'utf-8').trim()
+}
+
+function npmRegistry() {
+  const explicit = process.env.npm_config_registry || process.env.NPM_CONFIG_REGISTRY
+  if (explicit) return explicit
+
+  const saved = savedRegistry()
+  if (saved) return saved
+
+  try {
+    return execFileSync('npm', ['config', 'get', 'registry'], {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+  } catch {
+    return ''
+  }
+}
+
+function versionKey(version) {
+  return version
+    .replace(/^v/, '')
+    .split('.')
+    .map(part => part.padStart(6, '0'))
+    .join('')
+}
+
+function isNewerVersion(candidate, current) {
+  return versionKey(candidate) > versionKey(current)
+}
+
+function npmViewLatestVersion(registry) {
+  const args = ['view', '@jxtools/visualgit', 'version']
+  if (registry) args.push('--registry', registry)
+
+  return execFileSync('npm', args, {
+    encoding: 'utf-8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+    env: {
+      ...process.env,
+      npm_config_fetch_retries: '0',
+      npm_config_fetch_timeout: '5000',
+    },
+  }).trim()
+}
+
+function npmInstallLatest(registry) {
+  const args = ['install', '-g', '@jxtools/visualgit@latest']
+  if (registry) args.push('--registry', registry)
+
+  execFileSync('npm', args, {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      npm_config_fetch_retries: '0',
+      npm_config_fetch_timeout: '10000',
+    },
+  })
+}
 
 if (process.argv.includes('--version') || process.argv.includes('-v')) {
   console.log(`visualgit v${pkg.version}`)
@@ -15,13 +80,14 @@ if (process.argv.includes('--version') || process.argv.includes('-v')) {
 
 if (process.argv[2] === 'update') {
   const current = pkg.version
+  const registry = npmRegistry()
   console.log(`\x1b[36m⟳\x1b[0m Current version: v${current}`)
   console.log(`  Checking for updates...`)
 
   try {
-    const latest = execSync('npm view @jxtools/visualgit version', { encoding: 'utf-8' }).trim()
+    const latest = npmViewLatestVersion(registry)
 
-    if (latest === current) {
+    if (!isNewerVersion(latest, current)) {
       console.log(`\x1b[32m✓\x1b[0m Already on the latest version (v${current})`)
       process.exit(0)
     }
@@ -29,10 +95,11 @@ if (process.argv[2] === 'update') {
     console.log(`\x1b[33m↑\x1b[0m New version available: v${latest}`)
     console.log(`  Updating...`)
 
-    execSync('npm install -g @jxtools/visualgit@latest', { stdio: 'inherit' })
+    npmInstallLatest(registry)
     console.log(`\n\x1b[32m✓\x1b[0m Updated to v${latest}`)
   } catch (err) {
-    console.error(`\x1b[31m✗\x1b[0m Update failed: ${err.message}`)
+    const suffix = registry ? ` (registry: ${registry})` : ''
+    console.error(`\x1b[31m✗\x1b[0m Update failed${suffix}: ${err.message}`)
     process.exit(1)
   }
 

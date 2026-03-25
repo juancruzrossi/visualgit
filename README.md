@@ -8,6 +8,12 @@ Terminal-style git diff viewer with AI-powered explanations.
 npm install -g @jxtools/visualgit
 ```
 
+If your environment requires an explicit npm registry:
+
+```bash
+npm install -g @jxtools/visualgit --registry https://registry.npmjs.org/
+```
+
 ## Usage
 
 Navigate to any git repository and run:
