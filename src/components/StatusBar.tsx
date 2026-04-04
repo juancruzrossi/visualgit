@@ -10,22 +10,22 @@ export function StatusBar({ filesChanged, totalAdditions, totalDeletions }: Stat
   return (
     <footer
       className="h-8 shrink-0 flex items-center justify-between px-6"
-      style={{ background: '#161B22', borderTop: '1px solid #30363D' }}
+      style={{ background: 'var(--vg-bg-secondary)', borderTop: '1px solid var(--vg-border)' }}
     >
       <div className="flex items-center gap-4">
-        <span style={{ color: '#9DA5AE', fontSize: '12px' }}>
+        <span style={{ color: 'var(--vg-text-muted)', fontSize: '12px' }}>
           {filesChanged} file{filesChanged !== 1 ? 's' : ''} changed
         </span>
-        <span style={{ color: '#2EA043', fontSize: '12px' }}>
+        <span style={{ color: 'var(--vg-green)', fontSize: '12px' }}>
           {totalAdditions} insertion{totalAdditions !== 1 ? 's' : ''}(+)
         </span>
-        <span style={{ color: '#F85149', fontSize: '12px' }}>
+        <span style={{ color: 'var(--vg-red)', fontSize: '12px' }}>
           {totalDeletions} deletion{totalDeletions !== 1 ? 's' : ''}(-)
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <GitBranch size={12} color="#484F58" />
-        <span style={{ color: '#484F58', fontSize: '11px' }}>visualgit</span>
+        <GitBranch size={12} color="var(--vg-text-dim)" />
+        <span style={{ color: 'var(--vg-text-dim)', fontSize: '11px' }}>visualgit</span>
       </div>
     </footer>
   )

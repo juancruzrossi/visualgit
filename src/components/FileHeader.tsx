@@ -16,25 +16,25 @@ export function FileHeader({ path, additions, deletions, collapsed, onToggle, vi
   return (
     <div
       className="h-10 flex items-center justify-between px-4 shrink-0 cursor-pointer select-none"
-      style={{ background: '#161B22', borderBottom: '1px solid #30363D' }}
+      style={{ background: 'var(--vg-bg-secondary)', borderBottom: '1px solid var(--vg-border)' }}
       onClick={onToggle}
     >
       <div className="flex items-center gap-2 min-w-0">
-        <Chevron size={14} color="#9DA5AE" className="shrink-0" />
-        <FileCode size={14} color={viewed ? '#3FB950' : '#9DA5AE'} className="shrink-0" />
-        <span className="truncate" style={{ color: viewed ? '#9DA5AE' : '#E6EDF3', fontSize: '13px' }}>{path}</span>
+        <Chevron size={14} color="var(--vg-text-muted)" className="shrink-0" />
+        <FileCode size={14} color={viewed ? 'var(--vg-green)' : 'var(--vg-text-muted)'} className="shrink-0" />
+        <span className="truncate" style={{ color: viewed ? 'var(--vg-text-muted)' : 'var(--vg-text)', fontSize: '13px' }}>{path}</span>
       </div>
       <div className="flex items-center gap-3 shrink-0 ml-3">
-        <span style={{ color: '#3FB950', fontSize: '12px' }}>+{additions}</span>
-        <span style={{ color: '#F47067', fontSize: '12px' }}>-{deletions}</span>
+        <span style={{ color: 'var(--vg-green)', fontSize: '12px' }}>+{additions}</span>
+        <span style={{ color: 'var(--vg-red)', fontSize: '12px' }}>-{deletions}</span>
         <div
           className="flex items-center justify-center cursor-pointer shrink-0"
           style={{
             width: '15px',
             height: '15px',
-            border: `1.5px solid ${viewed ? '#3FB950' : '#484F58'}`,
+            border: `1.5px solid ${viewed ? 'var(--vg-green)' : 'var(--vg-text-dim)'}`,
             borderRadius: '3px',
-            background: viewed ? 'transparent' : 'transparent',
+            background: 'transparent',
           }}
           onClick={(e) => {
             e.stopPropagation()
@@ -43,7 +43,7 @@ export function FileHeader({ path, additions, deletions, collapsed, onToggle, vi
         >
           {viewed && (
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-              <path d="M2 5.5L4.5 8L9 3" stroke="#3FB950" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M2 5.5L4.5 8L9 3" stroke="var(--vg-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
         </div>

@@ -1,137 +1,21 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { FileCode, Folder, FolderOpen, ChevronRight, ChevronDown, PanelLeftClose, PanelLeft, ScanSearch, Check } from 'lucide-react'
+import { PanelLeftClose, PanelLeft, ScanSearch } from 'lucide-react'
 import { FileHeader } from './FileHeader'
 import { DiffLine } from './DiffLine'
-
-interface DiffLineData {
-  type: 'context' | 'addition' | 'deletion'
-  lineNumber: number
-  content: string
-}
-
-interface DiffFileData {
-  path: string
-  additions: number
-  deletions: number
-  lines: DiffLineData[]
-}
+import { TreeItem, buildTree, collectAllFolderPaths } from './FileTree'
+import { useResizable } from '../hooks/useResizable'
+import type { DiffFile } from '../../shared/types'
 
 interface DiffViewerProps {
-  files: DiffFileData[]
+  files: DiffFile[]
   selectedFile: number
   onSelectFile: (index: number) => void
   onSelectionChange: (text: string | null) => void
   onAnalyzeSelection: () => void
 }
 
-interface TreeNode {
-  name: string
-  children: Map<string, TreeNode>
-  fileIndex?: number
-  additions?: number
-  deletions?: number
-}
-
-function buildTree(files: DiffFileData[]): TreeNode {
-  const root: TreeNode = { name: '', children: new Map() }
-  files.forEach((f, i) => {
-    const parts = f.path.split('/')
-    let current = root
-    parts.forEach((part, pi) => {
-      if (!current.children.has(part)) {
-        current.children.set(part, { name: part, children: new Map() })
-      }
-      current = current.children.get(part)!
-      if (pi === parts.length - 1) {
-        current.fileIndex = i
-        current.additions = f.additions
-        current.deletions = f.deletions
-      }
-    })
-  })
-  return root
-}
-
-function TreeItem({ node, depth, selectedFile, onSelectFile, expandedFolders, toggleFolder, viewedFiles }: {
-  node: TreeNode
-  depth: number
-  selectedFile: number
-  onSelectFile: (i: number) => void
-  expandedFolders: Set<string>
-  toggleFolder: (path: string) => void
-  viewedFiles: Set<number>
-}) {
-  const isFile = node.fileIndex !== undefined
-  const isSelected = isFile && node.fileIndex === selectedFile
-  const isViewed = isFile && viewedFiles.has(node.fileIndex!)
-  const children = Array.from(node.children.values())
-  const folders = children.filter(c => c.fileIndex === undefined || c.children.size > 0)
-  const fileNodes = children.filter(c => c.fileIndex !== undefined && c.children.size === 0)
-  const sorted = [...folders, ...fileNodes]
-
-  if (isFile && node.children.size === 0) {
-    return (
-      <button
-        className="flex items-center gap-1.5 py-1 text-left cursor-pointer w-full"
-        style={{
-          paddingLeft: `${depth * 12 + 8}px`,
-          background: isSelected ? '#1C2128' : 'transparent',
-          border: 'none',
-          borderLeft: isSelected ? '2px solid #58A6FF' : '2px solid transparent',
-        }}
-        onClick={() => onSelectFile(node.fileIndex!)}
-      >
-        {isViewed ? (
-          <Check size={12} color="#3FB950" className="shrink-0" />
-        ) : (
-          <FileCode size={12} color={isSelected ? '#58A6FF' : '#9DA5AE'} className="shrink-0" />
-        )}
-        <span className="truncate" style={{ color: isViewed ? '#9DA5AE' : isSelected ? '#E6EDF3' : '#C9D1D9', fontSize: '12px' }}>
-          {node.name}
-        </span>
-        <span className="ml-auto shrink-0 flex gap-1 pr-2" style={{ fontSize: '11px' }}>
-          <span style={{ color: '#3FB950' }}>+{node.additions}</span>
-          <span style={{ color: '#F47067' }}>-{node.deletions}</span>
-        </span>
-      </button>
-    )
-  }
-
-  const folderPath = `${depth}-${node.name}`
-  const isOpen = expandedFolders.has(folderPath)
-  const FolderIcon = isOpen ? FolderOpen : Folder
-  const ChevronIcon = isOpen ? ChevronDown : ChevronRight
-
-  return (
-    <>
-      <button
-        className="flex items-center gap-1.5 py-1 text-left cursor-pointer w-full"
-        style={{ paddingLeft: `${depth * 12 + 8}px`, background: 'transparent', border: 'none' }}
-        onClick={() => toggleFolder(folderPath)}
-      >
-        <ChevronIcon size={10} color="#484F58" className="shrink-0" />
-        <FolderIcon size={12} color="#9DA5AE" className="shrink-0" />
-        <span style={{ color: '#9DA5AE', fontSize: '12px' }}>{node.name}</span>
-      </button>
-      {isOpen && sorted.map(child => (
-        <TreeItem
-          key={child.name}
-          node={child}
-          depth={depth + 1}
-          selectedFile={selectedFile}
-          onSelectFile={onSelectFile}
-          expandedFolders={expandedFolders}
-          toggleFolder={toggleFolder}
-          viewedFiles={viewedFiles}
-        />
-      ))}
-    </>
-  )
-}
-
 export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChange, onAnalyzeSelection }: DiffViewerProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [sidebarWidth, setSidebarWidth] = useState(240)
   const [selectionPopup, setSelectionPopup] = useState<{ x: number; y: number } | null>(null)
   const [collapsedFiles, setCollapsedFiles] = useState<Set<number>>(new Set())
   const [viewedFiles, setViewedFiles] = useState<Set<number>>(new Set())
@@ -141,26 +25,13 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
   const fileRefs = useRef<(HTMLDivElement | null)[]>([])
   const isScrollingTo = useRef(false)
 
-  const handleSidebarDragStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    const viewer = viewerRef.current
-    if (!viewer) return
-    const onMouseMove = (e: MouseEvent) => {
-      const rect = viewer.getBoundingClientRect()
-      const px = e.clientX - rect.left
-      setSidebarWidth(Math.max(150, Math.min(400, px)))
-    }
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-  }, [])
+  const { value: sidebarWidth, onDragStart: handleSidebarDragStart } = useResizable({
+    containerRef: viewerRef,
+    initial: 240,
+    min: 150,
+    max: 400,
+    unit: 'pixel',
+  })
 
   // Text selection detection
   useEffect(() => {
@@ -186,15 +57,7 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
   }, [onSelectionChange])
 
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
-    const set = new Set<string>()
-    function walk(node: TreeNode, depth: number) {
-      if (node.children.size > 0 && node.name) {
-        set.add(`${depth}-${node.name}`)
-      }
-      node.children.forEach(child => walk(child, depth + 1))
-    }
-    walk(tree, 0)
-    return set
+    return collectAllFolderPaths(tree, 0)
   })
 
   const toggleFolder = (path: string) => {
@@ -253,7 +116,7 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
 
   if (files.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center h-full" style={{ color: '#9DA5AE', fontSize: '13px' }}>
+      <div className="flex-1 flex items-center justify-center h-full" style={{ color: 'var(--vg-text-muted)', fontSize: '13px' }}>
         No diff available. Are you on a feature branch?
       </div>
     )
@@ -267,12 +130,12 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
         <>
         <div
           className="shrink-0 flex flex-col overflow-y-auto"
-          style={{ width: `${sidebarWidth}px`, background: '#161B22' }}
+          style={{ width: `${sidebarWidth}px`, background: 'var(--vg-bg-secondary)' }}
         >
-          <div className="flex items-center justify-between px-3 h-10 shrink-0" style={{ borderBottom: '1px solid #30363D' }}>
-            <span style={{ color: '#9DA5AE', fontSize: '12px' }}>Files ({files.length})</span>
+          <div className="flex items-center justify-between px-3 h-10 shrink-0" style={{ borderBottom: '1px solid var(--vg-border)' }}>
+            <span style={{ color: 'var(--vg-text-muted)', fontSize: '12px' }}>Files ({files.length})</span>
             <button className="cursor-pointer" style={{ background: 'transparent', border: 'none' }} onClick={() => setSidebarOpen(false)}>
-              <PanelLeftClose size={14} color="#9DA5AE" />
+              <PanelLeftClose size={14} color="var(--vg-text-muted)" />
             </button>
           </div>
           <div className="py-1">
@@ -292,7 +155,7 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
         </div>
         <div
           className="w-1 shrink-0 cursor-col-resize hover:bg-[#58A6FF]/40 transition-colors"
-          style={{ background: '#30363D' }}
+          style={{ background: 'var(--vg-border)' }}
           onMouseDown={handleSidebarDragStart}
         />
         </>
@@ -303,14 +166,14 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
           {!sidebarOpen && (
             <button
               className="h-10 px-3 shrink-0 cursor-pointer flex items-center"
-              style={{ background: '#161B22', border: 'none', borderBottom: '1px solid #30363D', borderRight: '1px solid #30363D' }}
+              style={{ background: 'var(--vg-bg-secondary)', border: 'none', borderBottom: '1px solid var(--vg-border)', borderRight: '1px solid var(--vg-border)' }}
               onClick={() => setSidebarOpen(true)}
             >
-              <PanelLeft size={14} color="#9DA5AE" />
+              <PanelLeft size={14} color="var(--vg-text-muted)" />
             </button>
           )}
-          <div className="flex-1 h-10 flex items-center px-4 shrink-0" style={{ background: '#161B22', borderBottom: '1px solid #30363D' }}>
-            <span style={{ color: '#9DA5AE', fontSize: '12px' }}>
+          <div className="flex-1 h-10 flex items-center px-4 shrink-0" style={{ background: 'var(--vg-bg-secondary)', borderBottom: '1px solid var(--vg-border)' }}>
+            <span style={{ color: 'var(--vg-text-muted)', fontSize: '12px' }}>
               {viewedFiles.size > 0 ? (
                 <>{viewedFiles.size} / {files.length} files viewed</>
               ) : (
@@ -326,8 +189,8 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
               style={{
                 left: selectionPopup.x,
                 top: selectionPopup.y,
-                background: '#161B22',
-                border: '1px solid #58A6FF',
+                background: 'var(--vg-bg-secondary)',
+                border: '1px solid var(--vg-accent)',
                 borderRadius: '6px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
               }}
@@ -337,8 +200,8 @@ export function DiffViewer({ files, selectedFile, onSelectFile, onSelectionChang
                 setSelectionPopup(null)
               }}
             >
-              <ScanSearch size={12} color="#58A6FF" />
-              <span style={{ color: '#58A6FF', fontSize: '11px', whiteSpace: 'nowrap' }}>Analyze Selection</span>
+              <ScanSearch size={12} color="var(--vg-accent)" />
+              <span style={{ color: 'var(--vg-accent)', fontSize: '11px', whiteSpace: 'nowrap' }}>Analyze Selection</span>
             </button>
           )}
           <div>

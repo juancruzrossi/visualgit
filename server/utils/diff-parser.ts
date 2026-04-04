@@ -1,15 +1,6 @@
-export interface DiffLine {
-  type: 'context' | 'addition' | 'deletion'
-  lineNumber: number
-  content: string
-}
+import type { DiffLine, DiffFile } from '../types.js'
 
-export interface DiffFile {
-  path: string
-  additions: number
-  deletions: number
-  lines: DiffLine[]
-}
+export type { DiffLine, DiffFile }
 
 export function parseDiff(rawDiff: string): DiffFile[] {
   const files: DiffFile[] = []

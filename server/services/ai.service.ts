@@ -1,12 +1,9 @@
-import { spawn } from 'child_process'
+import { spawn, type ChildProcess } from 'child_process'
+import type { AiProvider, AnalysisMode, ClaudeModel } from '../types.js'
 
-export type AiProvider = 'claude' | 'openai'
-export type AnalysisMode = 'full' | 'file' | 'selection'
-export type ClaudeModel = 'opus' | 'sonnet' | 'haiku'
+export type { AiProvider, AnalysisMode, ClaudeModel }
 
 export class AiService {
-  private hasConversation = false
-
   buildPrompt(mode: AnalysisMode, content: string, filePath?: string): string {
     const systemRules = [
       'Format your response using Markdown (headings, bold, bullet points, inline code).',
@@ -26,9 +23,7 @@ export class AiService {
 
   getCommand(provider: AiProvider, model: ClaudeModel = 'sonnet'): { command: string; args: string[]; useStdin: boolean } {
     if (provider === 'claude') {
-      const args = ['-p', '--model', model]
-      if (this.hasConversation) args.push('--continue')
-      return { command: 'claude', args, useStdin: true }
+      return { command: 'claude', args: ['-p', '--model', model], useStdin: true }
     }
     return {
       command: 'openai',
@@ -37,7 +32,7 @@ export class AiService {
     }
   }
 
-  async *analyze(provider: AiProvider, mode: AnalysisMode, content: string, filePath?: string, model?: ClaudeModel, repoPath?: string): AsyncGenerator<string> {
+  async *analyze(provider: AiProvider, mode: AnalysisMode, content: string, filePath?: string, model?: ClaudeModel, repoPath?: string, signal?: AbortSignal): AsyncGenerator<string> {
     const prompt = this.buildPrompt(mode, content, filePath)
     const { command, args, useStdin } = this.getCommand(provider, model)
 
@@ -46,6 +41,12 @@ export class AiService {
 
     const cwd = repoPath || process.cwd()
     const proc = spawn(command, args, { env, cwd, stdio: ['pipe', 'pipe', 'pipe'] })
+
+    if (signal) {
+      const onAbort = () => { proc.kill('SIGTERM') }
+      signal.addEventListener('abort', onAbort, { once: true })
+      proc.on('close', () => signal.removeEventListener('abort', onAbort))
+    }
 
     if (useStdin) {
       proc.stdin.write(prompt)
@@ -63,6 +64,10 @@ export class AiService {
       })
       proc.on('error', reject)
       proc.on('close', (code) => {
+        if (signal?.aborted) {
+          resolve(data)
+          return
+        }
         if (code !== 0 && !data) {
           reject(new Error(stderr.trim() || `Process exited with code ${code}`))
         } else {
@@ -70,8 +75,6 @@ export class AiService {
         }
       })
     })
-
-    if (provider === 'claude') this.hasConversation = true
 
     if (result) {
       const words = result.split(' ')

@@ -57,7 +57,7 @@ async function main() {
   const url = `http://localhost:${port}`
 
   const child = spawn('node', [serverPath], {
-    stdio: 'inherit',
+    stdio: ['inherit', 'pipe', 'inherit'],
     env: {
       ...process.env,
       REPO_PATH: repoPath,
@@ -71,17 +71,24 @@ async function main() {
     process.exit(1)
   })
 
-  setTimeout(() => {
-    if (isGitRepo) {
-      console.log(`\x1b[32m✓\x1b[0m VisualGit running at \x1b[36m${url}\x1b[0m`)
-      console.log(`  Repo: ${repoPath}`)
+  let ready = false
+  child.stdout.on('data', (data) => {
+    const text = data.toString()
+    if (!ready && text.includes('VISUALGIT_READY')) {
+      ready = true
+      if (isGitRepo) {
+        console.log(`\x1b[32m✓\x1b[0m VisualGit running at \x1b[36m${url}\x1b[0m`)
+        console.log(`  Repo: ${repoPath}`)
+      } else {
+        console.log(`\x1b[33m⚠\x1b[0m VisualGit running at \x1b[36m${url}\x1b[0m`)
+        console.log(`  \x1b[33mNot a git repository\x1b[0m`)
+      }
+      console.log(`  Press \x1b[33mCtrl+C\x1b[0m to stop\n`)
+      open(url)
     } else {
-      console.log(`\x1b[33m⚠\x1b[0m VisualGit running at \x1b[36m${url}\x1b[0m`)
-      console.log(`  \x1b[33mNot a git repository\x1b[0m`)
+      process.stdout.write(text)
     }
-    console.log(`  Press \x1b[33mCtrl+C\x1b[0m to stop\n`)
-    open(url)
-  }, 1500)
+  })
 
   child.on('close', (code) => process.exit(code ?? 0))
 

@@ -1,33 +1,5 @@
 import { useState, useEffect } from 'react'
-
-interface GitInfo {
-  repoName: string
-  currentBranch: string
-  baseBranch: string
-}
-
-interface DiffLine {
-  type: 'context' | 'addition' | 'deletion'
-  lineNumber: number
-  content: string
-}
-
-interface DiffFile {
-  path: string
-  additions: number
-  deletions: number
-  lines: DiffLine[]
-}
-
-interface DiffData {
-  rawDiff: string
-  files: DiffFile[]
-  summary: {
-    filesChanged: number
-    totalAdditions: number
-    totalDeletions: number
-  }
-}
+import type { GitInfo, DiffData } from '../../shared/types'
 
 export function useGitData() {
   const [info, setInfo] = useState<GitInfo | null>(null)

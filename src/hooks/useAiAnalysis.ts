@@ -1,19 +1,26 @@
-import { useState, useCallback } from 'react'
-
-type Provider = 'claude' | 'openai'
-type ClaudeModel = 'opus' | 'sonnet' | 'haiku'
-type AnalysisMode = 'full' | 'file' | 'selection'
-type LoadingPhase = null | 'connecting' | 'analyzing' | 'streaming'
+import { useState, useCallback, useRef } from 'react'
+import type { AiProvider, ClaudeModel, AnalysisMode, LoadingPhase } from '../../shared/types'
 
 export function useAiAnalysis() {
   const [analysis, setAnalysis] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>(null)
-  const [provider, setProvider] = useState<Provider>('claude')
+  const [provider, setProvider] = useState<AiProvider>('claude')
   const [model, setModel] = useState<ClaudeModel>('sonnet')
   const [lastMode, setLastMode] = useState<AnalysisMode | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  const cancelAnalysis = useCallback(() => {
+    abortRef.current?.abort()
+    abortRef.current = null
+  }, [])
 
   const analyze = useCallback(async (content: string, mode: AnalysisMode = 'full', filePath?: string) => {
+    cancelAnalysis()
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
     setIsLoading(true)
     setLoadingPhase('connecting')
     setAnalysis('')
@@ -24,6 +31,7 @@ export function useAiAnalysis() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider, mode, content, filePath, model: provider === 'claude' ? model : undefined }),
+        signal: controller.signal,
       })
 
       setLoadingPhase('analyzing')
@@ -60,13 +68,16 @@ export function useAiAnalysis() {
           }
         }
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setAnalysis(prev => prev + '\n\n[Error: AI analysis failed]')
     } finally {
-      setIsLoading(false)
-      setLoadingPhase(null)
+      if (!controller.signal.aborted) {
+        setIsLoading(false)
+        setLoadingPhase(null)
+      }
     }
-  }, [provider, model])
+  }, [provider, model, cancelAnalysis])
 
-  return { analysis, isLoading, loadingPhase, provider, setProvider, model, setModel, analyze, lastMode }
+  return { analysis, isLoading, loadingPhase, provider, setProvider, model, setModel, analyze, cancelAnalysis, lastMode }
 }

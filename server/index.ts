@@ -1,5 +1,4 @@
 import express from 'express'
-import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { createGitRouter } from './routes/git.js'
@@ -10,7 +9,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export function createServer(repoPath: string, isGitRepo = true) {
   const app = express()
 
-  app.use(cors())
   app.use(express.json({ limit: '5mb' }))
 
   app.use('/api/git', createGitRouter(repoPath, isGitRepo))
@@ -34,5 +32,7 @@ if (isDirectRun) {
   const port = parseInt(process.env.PORT || '4321', 10)
   const isGitRepo = process.env.IS_GIT_REPO !== 'false'
   const app = createServer(repoPath, isGitRepo)
-  app.listen(port)
+  app.listen(port, () => {
+    process.stdout.write('VISUALGIT_READY\n')
+  })
 }
