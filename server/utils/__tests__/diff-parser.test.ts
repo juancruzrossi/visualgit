@@ -600,7 +600,7 @@ Binary files a/old.png and /dev/null differ
     expect(files[0].isBinary).toBe(true)
   })
 
-  it('handles added line that is just a space character', () => {
+  it('handles added empty line (just + prefix)', () => {
     const raw = `diff --git a/file.ts b/file.ts
 --- a/file.ts
 +++ b/file.ts
@@ -609,6 +609,15 @@ Binary files a/old.png and /dev/null differ
 +
  line2
 `
+    const files = parseDiff(raw)
+    expect(files[0].additions).toBe(1)
+    const addLine = files[0].lines.find(l => l.type === 'addition')!
+    expect(addLine.content).toBe('')
+  })
+
+  it('handles added line that is a single space', () => {
+    // "+ " — plus followed by a space character
+    const raw = "diff --git a/file.ts b/file.ts\n--- a/file.ts\n+++ b/file.ts\n@@ -1,2 +1,3 @@\n line1\n+ \n line2\n"
     const files = parseDiff(raw)
     expect(files[0].additions).toBe(1)
     const addLine = files[0].lines.find(l => l.type === 'addition')!
