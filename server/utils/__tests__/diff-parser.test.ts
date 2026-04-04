@@ -484,3 +484,215 @@ describe('parseDiff — large hunks', () => {
     expect(files[0].lines[0].newLineNumber).toBe(10001)
   })
 })
+
+// ─── Stress tests ───────────────────────────────────────────
+
+describe('parseDiff — stress & adversarial', () => {
+  it('handles hunk header with extra context after @@', () => {
+    const raw = `diff --git a/file.ts b/file.ts
+--- a/file.ts
++++ b/file.ts
+@@ -1,3 +1,4 @@ function doStuff() {
+ line1
++added
+ line2
+ line3
+`
+    const files = parseDiff(raw)
+    expect(files).toHaveLength(1)
+    expect(files[0].additions).toBe(1)
+  })
+
+  it('handles file with + in the name', () => {
+    const raw = `diff --git a/c++/main.cpp b/c++/main.cpp
+--- a/c++/main.cpp
++++ b/c++/main.cpp
+@@ -1,2 +1,3 @@
+ #include <iostream>
++// comment
+ int main() {}
+`
+    const files = parseDiff(raw)
+    expect(files[0].path).toBe('c++/main.cpp')
+  })
+
+  it('handles file with --- in the name', () => {
+    const raw = `diff --git a/my---file.ts b/my---file.ts
+--- a/my---file.ts
++++ b/my---file.ts
+@@ -1,2 +1,3 @@
+ line1
++added
+ line2
+`
+    const files = parseDiff(raw)
+    expect(files[0].path).toBe('my---file.ts')
+  })
+
+  it('handles an added empty file', () => {
+    const raw = `diff --git a/empty.ts b/empty.ts
+new file mode 100644
+index 0000000..e69de29
+`
+    const files = parseDiff(raw)
+    expect(files).toHaveLength(1)
+    expect(files[0].path).toBe('empty.ts')
+    expect(files[0].status).toBe('added')
+    expect(files[0].lines).toHaveLength(0)
+  })
+
+  it('handles multiple consecutive empty lines in a hunk', () => {
+    const raw = `diff --git a/file.ts b/file.ts
+--- a/file.ts
++++ b/file.ts
+@@ -1,6 +1,7 @@
+ line1
++added
+
+
+ line4
+
+ line6
+`
+    const files = parseDiff(raw)
+    expect(files[0].additions).toBe(1)
+    // Should have context lines for the empty lines
+    const contextLines = files[0].lines.filter(l => l.type === 'context')
+    expect(contextLines.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('handles file with unicode in path', () => {
+    const raw = `diff --git a/docs/café.md b/docs/café.md
+--- a/docs/café.md
++++ b/docs/café.md
+@@ -1,2 +1,3 @@
+ # Café
++New line
+ Content
+`
+    const files = parseDiff(raw)
+    expect(files[0].path).toBe('docs/café.md')
+  })
+
+  it('handles rename with no content changes and no hunks', () => {
+    const raw = `diff --git a/old-name.ts b/new-name.ts
+similarity index 100%
+rename from old-name.ts
+rename to new-name.ts
+`
+    const files = parseDiff(raw)
+    expect(files[0].path).toBe('new-name.ts')
+    expect(files[0].oldPath).toBe('old-name.ts')
+    expect(files[0].status).toBe('renamed')
+    expect(files[0].additions).toBe(0)
+    expect(files[0].deletions).toBe(0)
+  })
+
+  it('handles deleted binary file', () => {
+    const raw = `diff --git a/old.png b/old.png
+deleted file mode 100644
+index abc1234..0000000
+Binary files a/old.png and /dev/null differ
+`
+    const files = parseDiff(raw)
+    expect(files).toHaveLength(1)
+    expect(files[0].status).toBe('deleted')
+    expect(files[0].isBinary).toBe(true)
+  })
+
+  it('handles added line that is just a space character', () => {
+    const raw = `diff --git a/file.ts b/file.ts
+--- a/file.ts
++++ b/file.ts
+@@ -1,2 +1,3 @@
+ line1
++
+ line2
+`
+    const files = parseDiff(raw)
+    expect(files[0].additions).toBe(1)
+    const addLine = files[0].lines.find(l => l.type === 'addition')!
+    expect(addLine.content).toBe(' ')
+  })
+
+  it('handles mixed CRLF and LF in same diff', () => {
+    const raw = "diff --git a/file.ts b/file.ts\r\n--- a/file.ts\n+++ b/file.ts\r\n@@ -1,2 +1,3 @@\n line1\r\n+added\n line2\n"
+    const files = parseDiff(raw)
+    expect(files).toHaveLength(1)
+    expect(files[0].additions).toBe(1)
+    const addLine = files[0].lines.find(l => l.type === 'addition')!
+    expect(addLine.content).not.toContain('\r')
+  })
+
+  it('handles a file with only additions (new file content)', () => {
+    const raw = `diff --git a/brand-new.ts b/brand-new.ts
+new file mode 100644
+index 0000000..abc1234
+--- /dev/null
++++ b/brand-new.ts
+@@ -0,0 +1,5 @@
++line1
++line2
++line3
++line4
++line5
+`
+    const files = parseDiff(raw)
+    expect(files[0].additions).toBe(5)
+    expect(files[0].deletions).toBe(0)
+    expect(files[0].status).toBe('added')
+    expect(files[0].lines).toHaveLength(5)
+  })
+
+  it('handles three or more hunks', () => {
+    const raw = `diff --git a/file.ts b/file.ts
+--- a/file.ts
++++ b/file.ts
+@@ -1,2 +1,3 @@
+ a
++b
+ c
+@@ -10,2 +11,3 @@
+ d
++e
+ f
+@@ -20,2 +22,3 @@
+ g
++h
+ i
+`
+    const files = parseDiff(raw)
+    expect(files[0].additions).toBe(3)
+    expect(files[0].lines).toHaveLength(9)
+  })
+
+  it('handles hunk starting at line 0 (new file)', () => {
+    const raw = `diff --git a/f.ts b/f.ts
+new file mode 100644
+--- /dev/null
++++ b/f.ts
+@@ -0,0 +1,2 @@
++hello
++world
+`
+    const files = parseDiff(raw)
+    expect(files[0].additions).toBe(2)
+    expect(files[0].lines[0].newLineNumber).toBe(1)
+    expect(files[0].lines[1].newLineNumber).toBe(2)
+  })
+
+  it('handles diff with dissimilarity index', () => {
+    const raw = `diff --git a/file.ts b/file.ts
+dissimilarity index 85%
+--- a/file.ts
++++ b/file.ts
+@@ -1,2 +1,2 @@
+-old content
++completely new content
+`
+    const files = parseDiff(raw)
+    expect(files).toHaveLength(1)
+    expect(files[0].additions).toBe(1)
+    expect(files[0].deletions).toBe(1)
+  })
+})
