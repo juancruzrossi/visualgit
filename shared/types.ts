@@ -43,7 +43,7 @@ export interface GitDataResponse {
   diff: DiffData | null
 }
 
-export type AiProvider = 'claude' | 'openai'
+export type AiProvider = 'claude' | 'codex'
 export type AnalysisMode = 'full' | 'file' | 'selection'
 export type ClaudeModel = 'opus' | 'sonnet' | 'haiku'
 export type LoadingPhase = null | 'connecting' | 'analyzing' | 'streaming'

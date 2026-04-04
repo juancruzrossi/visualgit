@@ -30,8 +30,8 @@ export class AiService {
       return { command: 'claude', args: ['-p', '--model', model], useStdin: true }
     }
     return {
-      command: 'openai',
-      args: ['api', 'chat.completions.create', '-m', 'gpt-4o', '-g', 'user'],
+      command: 'codex',
+      args: ['exec', '--full-auto'],
       useStdin: true,
     }
   }

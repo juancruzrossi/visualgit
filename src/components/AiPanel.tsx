@@ -23,7 +23,7 @@ interface AiPanelProps {
 
 const providers = [
   { value: 'claude' as const, label: 'Claude' },
-  { value: 'openai' as const, label: 'OpenAI' },
+  { value: 'codex' as const, label: 'Codex' },
 ]
 
 const claudeModels: Array<{ value: ClaudeModel; label: string }> = [
