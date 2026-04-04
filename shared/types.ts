@@ -7,8 +7,13 @@ export interface DiffLine {
   content: string
 }
 
+export type DiffFileStatus = 'added' | 'deleted' | 'modified' | 'renamed' | 'copied'
+
 export interface DiffFile {
   path: string
+  oldPath?: string
+  status?: DiffFileStatus
+  isBinary?: boolean
   additions: number
   deletions: number
   lines: DiffLine[]
@@ -38,7 +43,7 @@ export interface GitDataResponse {
   diff: DiffData | null
 }
 
-export type AiProvider = 'claude' | 'openai'
+export type AiProvider = 'claude' | 'codex'
 export type AnalysisMode = 'full' | 'file' | 'selection'
 export type ClaudeModel = 'opus' | 'sonnet' | 'haiku'
 export type LoadingPhase = null | 'connecting' | 'analyzing' | 'streaming'

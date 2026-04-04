@@ -1,6 +1,6 @@
 {
   "name": "@jxtools/visualgit",
-  "version": "1.5.12",
+  "version": "1.6.0",
   "description": "Terminal-style git diff viewer with AI-powered explanations",
   "type": "module",
   "bin": {
@@ -23,7 +23,7 @@
     "build:frontend": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
     "prepublishOnly": "npm run build",
-    "lint": "eslint .",
+"lint": "eslint .",
     "format": "prettier --write ."
   },
   "keywords": [
