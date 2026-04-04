@@ -704,4 +704,84 @@ dissimilarity index 85%
     expect(files[0].additions).toBe(1)
     expect(files[0].deletions).toBe(1)
   })
+
+  it('handles hunk with no count (implies 1 line)', () => {
+    // @@ -1 +1 @@ means 1 line on each side (count omitted = 1)
+    const raw = `diff --git a/file.ts b/file.ts
+--- a/file.ts
++++ b/file.ts
+@@ -1 +1 @@
+-old
++new
+`
+    const files = parseDiff(raw)
+    expect(files[0].additions).toBe(1)
+    expect(files[0].deletions).toBe(1)
+    expect(files[0].lines).toHaveLength(2)
+  })
+
+  it('handles consecutive empty lines correctly with hunk counts', () => {
+    // 4 old lines, 5 new lines — two consecutive empty lines are real content
+    const raw = `diff --git a/file.ts b/file.ts
+--- a/file.ts
++++ b/file.ts
+@@ -1,4 +1,5 @@
+ start
++added
+
+
+ end
+`
+    const files = parseDiff(raw)
+    expect(files[0].additions).toBe(1)
+    const emptyContextLines = files[0].lines.filter(
+      l => l.type === 'context' && l.content === ''
+    )
+    // Both empty lines are real content (within hunk bounds)
+    expect(emptyContextLines).toHaveLength(2)
+  })
+
+  it('handles file entirely deleted to empty', () => {
+    const raw = `diff --git a/file.ts b/file.ts
+deleted file mode 100644
+index abc1234..0000000
+--- a/file.ts
++++ /dev/null
+@@ -1 +0,0 @@
+-only line
+`
+    const files = parseDiff(raw)
+    expect(files[0].status).toBe('deleted')
+    expect(files[0].deletions).toBe(1)
+    expect(files[0].additions).toBe(0)
+  })
+
+  it('handles rename with spaces in both paths', () => {
+    const raw = `diff --git a/my dir/old name.ts b/my dir/new name.ts
+similarity index 100%
+rename from my dir/old name.ts
+rename to my dir/new name.ts
+`
+    const files = parseDiff(raw)
+    expect(files[0].path).toBe('my dir/new name.ts')
+    expect(files[0].oldPath).toBe('my dir/old name.ts')
+    expect(files[0].status).toBe('renamed')
+  })
+
+  it('handles many files in one diff', () => {
+    let raw = ''
+    for (let i = 0; i < 50; i++) {
+      raw += `diff --git a/file${i}.ts b/file${i}.ts
+--- a/file${i}.ts
++++ b/file${i}.ts
+@@ -1,2 +1,3 @@
+ line1
++added${i}
+ line2
+`
+    }
+    const files = parseDiff(raw)
+    expect(files).toHaveLength(50)
+    expect(files.every(f => f.additions === 1)).toBe(true)
+  })
 })
