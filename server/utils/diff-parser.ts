@@ -1,10 +1,9 @@
 import type { DiffFile, DiffFileStatus, DiffLine } from '../../shared/types.js'
 
-const HUNK_HEADER_REGEX = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/
+const HUNK_HEADER_REGEX = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/
 const DIFF_HEADER_REGEX = /^a\/(.+?) b\/(.+)$/
 
 export function parseDiff(rawDiff: string): DiffFile[] {
-  // Normalize CRLF to LF
   const normalized = rawDiff.replace(/\r\n/g, '\n')
   const files: DiffFile[] = []
   const fileSections = normalized.split(/^diff --git /m).filter(Boolean)
@@ -20,7 +19,7 @@ export function parseDiff(rawDiff: string): DiffFile[] {
     let status: DiffFileStatus | undefined
     let isBinary = false
 
-    // Parse extended headers (lines between diff header and hunk/content)
+    // Parse extended headers
     let lineIdx = 1
     for (; lineIdx < lines.length; lineIdx++) {
       const line = lines[lineIdx]
@@ -29,12 +28,12 @@ export function parseDiff(rawDiff: string): DiffFile[] {
         oldPath = line.slice('rename from '.length)
         status = 'renamed'
       } else if (line.startsWith('rename to ')) {
-        // already handled by 'rename from'
+        // handled by 'rename from'
       } else if (line.startsWith('copy from ')) {
         oldPath = line.slice('copy from '.length)
         status = 'copied'
       } else if (line.startsWith('copy to ')) {
-        // already handled by 'copy from'
+        // handled by 'copy from'
       } else if (line.startsWith('new file mode')) {
         status = 'added'
       } else if (line.startsWith('deleted file mode')) {
@@ -46,16 +45,16 @@ export function parseDiff(rawDiff: string): DiffFile[] {
       } else if (line.startsWith('---') || line.startsWith('@@')) {
         break
       }
-      // Skip: similarity index, index, dissimilarity index, +++
     }
 
-    // Parse hunks
+    // Parse hunks using line counts from hunk header
     const parsedLines: DiffLine[] = []
     let additions = 0
     let deletions = 0
     let oldLineNumber = 0
     let newLineNumber = 0
-    let inHunk = false
+    let remainingOld = 0
+    let remainingNew = 0
 
     for (; lineIdx < lines.length; lineIdx++) {
       const line = lines[lineIdx]
@@ -63,14 +62,18 @@ export function parseDiff(rawDiff: string): DiffFile[] {
       const hunkMatch = line.match(HUNK_HEADER_REGEX)
       if (hunkMatch) {
         oldLineNumber = Number.parseInt(hunkMatch[1], 10)
-        newLineNumber = Number.parseInt(hunkMatch[2], 10)
-        inHunk = true
+        newLineNumber = Number.parseInt(hunkMatch[3], 10)
+        remainingOld = hunkMatch[2] ? Number.parseInt(hunkMatch[2], 10) : 1
+        remainingNew = hunkMatch[4] ? Number.parseInt(hunkMatch[4], 10) : 1
         continue
       }
 
-      if (!inHunk || line.startsWith('+++') || line.startsWith('---') || line.startsWith('\\')) {
-        continue
-      }
+      // Outside a hunk (both counters exhausted)
+      if (remainingOld <= 0 && remainingNew <= 0) continue
+
+      if (line.startsWith('\\')) continue
+
+      if (line.startsWith('+++') || line.startsWith('---')) continue
 
       if (line.startsWith('+')) {
         parsedLines.push({
@@ -80,6 +83,7 @@ export function parseDiff(rawDiff: string): DiffFile[] {
         })
         additions += 1
         newLineNumber += 1
+        remainingNew -= 1
         continue
       }
 
@@ -91,32 +95,22 @@ export function parseDiff(rawDiff: string): DiffFile[] {
         })
         deletions += 1
         oldLineNumber += 1
+        remainingOld -= 1
         continue
       }
 
-      if (line.startsWith(' ')) {
+      // Context line (starts with space or is bare empty line within hunk bounds)
+      if (line.startsWith(' ') || (line === '' && remainingOld > 0 && remainingNew > 0)) {
         parsedLines.push({
           type: 'context',
           oldLineNumber,
           newLineNumber,
-          content: line.slice(1),
+          content: line.startsWith(' ') ? line.slice(1) : '',
         })
         oldLineNumber += 1
         newLineNumber += 1
-        continue
-      }
-
-      // Bare empty line inside a hunk = context with empty content
-      // But only if it's genuinely part of the hunk (not trailing)
-      if (line === '' && lineIdx < lines.length - 1 && lines[lineIdx + 1] !== '') {
-        parsedLines.push({
-          type: 'context',
-          oldLineNumber,
-          newLineNumber,
-          content: '',
-        })
-        oldLineNumber += 1
-        newLineNumber += 1
+        remainingOld -= 1
+        remainingNew -= 1
       }
     }
 
