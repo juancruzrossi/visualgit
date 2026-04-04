@@ -7,8 +7,13 @@ export interface DiffLine {
   content: string
 }
 
+export type DiffFileStatus = 'added' | 'deleted' | 'modified' | 'renamed' | 'copied'
+
 export interface DiffFile {
   path: string
+  oldPath?: string
+  status?: DiffFileStatus
+  isBinary?: boolean
   additions: number
   deletions: number
   lines: DiffLine[]
